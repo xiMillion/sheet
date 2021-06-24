@@ -1,8 +1,8 @@
 
 
-interface OPTION {
+declare interface OPTION {
      //模式  默认 edit  只读 readonly
-    mode?: string,
+    mode?: 'edit' | 'readonly',
     //行配置
     row?: ROW,
     //列配置
@@ -11,7 +11,7 @@ interface OPTION {
     dataSet?: Array<Array<CELL>>,
 }
 
-export interface ROW{
+declare interface ROW{
     //初始行数
     length?: number,
     //行高
@@ -30,12 +30,12 @@ export interface ROW{
     extension?: boolean
 }
 
-export interface ROWMAP{
+declare interface ROWMAP{
     //高度
     height: number
 }
 
-export interface COL{
+declare interface COL{
     //初始列数
     length?: number,
     //列宽
@@ -54,7 +54,7 @@ export interface COL{
     extension?: boolean
 }
 
-export interface COLMAP{
+declare interface COLMAP{
     //宽度
     height: number,
     //启用筛选
@@ -63,7 +63,7 @@ export interface COLMAP{
     sort:boolean
 }
 
-export interface CELL{
+declare interface CELL{
     //原始值
     v: unknown,
     //展示文本值
@@ -78,7 +78,7 @@ export interface CELL{
     m: 'txt'
 }
 
-export interface STYLE{
+declare interface STYLE{
     //背景色
     bc?: string,
     //字体颜色
@@ -92,11 +92,11 @@ export interface STYLE{
     //垂直方式
     v?: string,
     //粗体
-    b?: boolean,
+    b?: number,
     //斜体
-    i?: boolean,
+    i?: number,
     //下划线
-    u?: boolean,
+    u?: number,
     //边框  style color width
     bl:[string,string,number],
     br: [string,string,number],
@@ -109,5 +109,3 @@ export interface STYLE{
     //字符展现形式 0-超出截断  1-溢出  2-换行
     tt: 0 | 1 | 2,
 }
-
-export default OPTION;
