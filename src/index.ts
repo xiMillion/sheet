@@ -29,25 +29,36 @@ class XSheet{
     fixedOffsetTop: number;
     fixedOffsetLeft: number;
 
+    //滚动盒子
+    scrollBoxEl:HTMLElement;
+    scrollContentEl:HTMLElement;
+
     static versions = '1.00';
     static log = log;
 
     constructor (public dom: HTMLElement | string , public option?: Option){
 
-        console.time('render');
+        console.time('init');
 
         this.rootEl = typeof dom === 'string' ? document.querySelector(dom) : dom;
+        this.rootEl.className = 'xsheet-table';
+        this.rootEl.style.border = '1px solid #ddd'
+        
         this.option = option || {};
 
         this.handOption();
 
-        this.init();
+        //宽高发生改变需要重新调用
+        this.getRootRect();
 
         this.Canvas = new Canvas(this);
-
         this.rootEl.appendChild(this.Canvas.canvas);
 
-        console.timeEnd('render');
+        this.init();
+
+        this.render();
+
+        console.timeEnd('init');
     }
 
     init():void{
@@ -59,19 +70,61 @@ class XSheet{
         this.fixedOffsetLeft = this.getFixedOffsetLeft();
         this.fixedOffsetTop = this.getFixedOffsetTop();
 
-        //next 2  宽高发生改变需要重新调用
-        this.getRootRect();
-        //mext 3
+
+        //mext 2
         this.calculation();
+
+        // next 1
+        this.generateFrame();
+        //next 2
+        this.setScrollStyle();
         
     }
+
+    render():void{
+        this.Canvas.render();
+    }
+
+    /***********************Event***************************/
+
+    scrollFn(event: Event):void{
+        //console.time('render');
+        this.scrollTop = (event.target as HTMLElement).scrollTop;
+        this.scrollLeft = (event.target as HTMLElement).scrollLeft;
+
+        this.calculation();
+        this.render();
+        //console.timeEnd('render');
+    }
+
+    /************************dom***************************/
+
+    generateFrame():void{
+
+        this.scrollBoxEl = document.createElement('div');
+        this.scrollBoxEl.className = 'xsheet-table-scrollbox';
+
+        this.scrollBoxEl.addEventListener('scroll',this.scrollFn.bind(this));
+
+        this.scrollContentEl = document.createElement('div');
+        this.scrollBoxEl.appendChild(this.scrollContentEl);
+        this.rootEl.appendChild(this.scrollBoxEl);
+    }
+
+    setScrollStyle():void{
+        //设置盒子宽高
+        this.scrollContentEl.style.width = this.totalWidth() + 'px';
+        this.scrollContentEl.style.height = this.totalHeight() + 'px';
+    }
+
+    /************************dataHand***************************/
 
     calculation():void{
         const {scrollTop,scrollLeft,boxWidth,boxHeight} = this;
 
         const {startRowIndex,endRowIndex} = this.findNearestItemIndex_row(scrollTop,scrollTop + boxHeight);
         const {startColIndex,endColIndex} = this.findNearestItemIndex_col(scrollLeft,scrollLeft + boxWidth);
-        
+
         this.startRowIndex = startRowIndex;
         this.endRowIndex = endRowIndex;
         this.startColIndex = startColIndex;
@@ -80,8 +133,8 @@ class XSheet{
     
 
     getRootRect():void{
-        this.boxWidth = this.rootEl.offsetWidth;
-        this.boxHeight = this.rootEl.offsetHeight;
+        this.boxWidth = this.rootEl.clientWidth;
+        this.boxHeight = this.rootEl.clientHeight;
     }
 
     handOption(): void{
@@ -118,7 +171,7 @@ class XSheet{
         const rowMap:RowMap[] = option.row.map;
         const rowLength:number = option.row.length;
         const fixedEnd:number = option.row.fixedEnd;
-        let total = 0 , startRowIndex:number , endRowIndex:number;
+        let total = 0 , startRowIndex:number , endRowIndex:number = rowLength;
 
         for (let i = fixedEnd; i < rowLength; i++) {
 
@@ -139,7 +192,7 @@ class XSheet{
         const colMap:ColMap[] = option.col.map;
         const colLength:number = option.col.length;
         const fixedEnd:number = option.col.fixedEnd;
-        let total = 0, startColIndex:number , endColIndex:number;
+        let total = 0, startColIndex:number , endColIndex:number = colLength;
 
         for (let i = fixedEnd; i < colLength; i++) {
 
@@ -158,7 +211,7 @@ class XSheet{
     getRowBarWidth():number{
         const rowWidth:number | string = this.option.style.row.width;
         const fontSize = this.option.style.row.fontSize;
-        return (rowWidth === 'maxw' ? (String(this.option.row.length + 1).length * fontSize + 5) : rowWidth as number);
+        return (rowWidth === 'maxw' ? (String(this.option.row.length + 1).length * (fontSize - 2)) : rowWidth as number);
     }
 
     getFixedOffsetLeft():number{
@@ -185,13 +238,34 @@ class XSheet{
         }
         return total;
     }
+
+    //总高
+    totalHeight():number{
+        const rowMap = this.option.row.map;
+        const fixedEnd = this.option.row.fixedEnd;
+        let total = 0;
+        for (let i = fixedEnd, j = rowMap.length; i < j; i++) {
+            total += rowMap[i].height;
+        }
+        return total + this.fixedOffsetTop;
+    }
+
+    //总宽
+    totalWidth():number{
+        const colMap = this.option.col.map;
+        const fixedEnd = this.option.col.fixedEnd;
+        let total = 0;
+        for (let i = fixedEnd, j = colMap.length; i < j; i++) {
+            total += colMap[i].width;
+        }
+        return total + this.fixedOffsetLeft;
+    }
 }
 
 const dataSet:any = [];
-
 for(let r = 0; r < 1000; r ++){
     dataSet[r] = [];
-    for(let c = 0; c < 1000; c ++){
+    for(let c = 0; c < 100; c ++){
         dataSet[r].push({
             w: `${r}-${c}`
         })
@@ -201,10 +275,12 @@ for(let r = 0; r < 1000; r ++){
 
 new XSheet('#box',{
     dataSet,
-    // row:{
-    //     fixedStart: 0,
-    //     fixedEnd: 10
-    // }
+    row:{
+        length: 1000
+    },
+    col:{
+        length: 100
+    }
 })
 
 export default XSheet;

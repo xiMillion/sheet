@@ -21,12 +21,12 @@ export default class Canvas{
         this.ctx = this.canvas.getContext('2d');
         
         this.initCanvas(context.boxWidth,context.boxHeight);
-
-        this.render();
         
     }
 
     render():void{
+        this.clearCanvas();
+
         const {option} = this.context;
         //set none dont renderLine
         const isRenderInnerBorder = option.style.innerBorderColor !== 'none';
@@ -37,16 +37,21 @@ export default class Canvas{
         this.renderTable();
     }
 
+    clearCanvas(): void{
+        const {ctx} = this;
+        const {boxHeight,boxWidth} = this.context;
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, boxWidth, boxHeight);
+    }
+
     initCanvas(width:number,height:number):void{
 
         const {ctx} = this;
         const bgColor:string = this.context.option.style.background;
-        const borderColor:string = this.context.option.style.outBorderColor;
         
         //basic attr
         this.canvas.width = width;
         this.canvas.height = height;
-        this.canvas.style.border = `1px solid ${borderColor}`;
         
         //set background
         ctx.fillStyle = bgColor;
