@@ -5,6 +5,11 @@ import {extend} from './utils';
 
 const log = console.log;
 
+/**
+ * 线宽 0.5 不生效
+ * topleft 颜色不一样
+ */
+
 class XSheet{
     //容器元素
     rootEl: HTMLElement;
@@ -23,6 +28,9 @@ class XSheet{
     endRowIndex:number;
     startColIndex:number;
     endColIndex:number;
+    //滚动偏移量
+    scrollOffsetTop:number;
+    scrollOffsetLeft:number;
     //左侧表头宽度
     rowBarWidth:number;
     //固定区域偏移量 包含表头
@@ -88,13 +96,13 @@ class XSheet{
     /***********************Event***************************/
 
     scrollFn(event: Event):void{
-        //console.time('render');
+        console.time('render');
         this.scrollTop = (event.target as HTMLElement).scrollTop;
         this.scrollLeft = (event.target as HTMLElement).scrollLeft;
 
         this.calculation();
         this.render();
-        //console.timeEnd('render');
+        console.timeEnd('render');
     }
 
     /************************dom***************************/
@@ -122,13 +130,15 @@ class XSheet{
     calculation():void{
         const {scrollTop,scrollLeft,boxWidth,boxHeight} = this;
 
-        const {startRowIndex,endRowIndex} = this.findNearestItemIndex_row(scrollTop,scrollTop + boxHeight);
-        const {startColIndex,endColIndex} = this.findNearestItemIndex_col(scrollLeft,scrollLeft + boxWidth);
+        const {startRowIndex,endRowIndex,scrollOffsetTop} = this.findNearestItemIndex_row(scrollTop,scrollTop + boxHeight);
+        const {startColIndex,endColIndex,scrollOffsetLeft} = this.findNearestItemIndex_col(scrollLeft,scrollLeft + boxWidth);
 
         this.startRowIndex = startRowIndex;
         this.endRowIndex = endRowIndex;
         this.startColIndex = startColIndex;
         this.endColIndex = endColIndex;
+        this.scrollOffsetTop = scrollOffsetTop;
+        this.scrollOffsetLeft = scrollOffsetLeft;
     }
     
 
@@ -166,12 +176,12 @@ class XSheet{
 
     }
 
-    findNearestItemIndex_row(scrollTop_strat:number,scrollTop_end:number): {startRowIndex:number,endRowIndex:number} {
+    findNearestItemIndex_row(scrollTop_strat:number,scrollTop_end:number): {startRowIndex:number,endRowIndex:number,scrollOffsetTop:number} {
         const {option} = this;
         const rowMap:RowMap[] = option.row.map;
         const rowLength:number = option.row.length;
         const fixedEnd:number = option.row.fixedEnd;
-        let total = 0 , startRowIndex:number , endRowIndex:number = rowLength;
+        let total = 0 , startRowIndex:number , endRowIndex:number = rowLength,scrollOffsetTop:number;
 
         for (let i = fixedEnd; i < rowLength; i++) {
 
@@ -179,33 +189,35 @@ class XSheet{
 
             if (startRowIndex === undefined && total >= scrollTop_strat) {
                 startRowIndex = i;
+                scrollOffsetTop = total - rowMap[i].height;
             }else if (total >= scrollTop_end) {
                 endRowIndex = i;
                 break;
             }
         }
 
-        return {startRowIndex,endRowIndex};
+        return {startRowIndex,endRowIndex,scrollOffsetTop};
     }
-    findNearestItemIndex_col(scrollLeft_strat:number,scrollLeft_end:number):{startColIndex:number,endColIndex:number} {
+    findNearestItemIndex_col(scrollLeft_strat:number,scrollLeft_end:number):{startColIndex:number,endColIndex:number,scrollOffsetLeft:number} {
         const {option} = this;
         const colMap:ColMap[] = option.col.map;
         const colLength:number = option.col.length;
         const fixedEnd:number = option.col.fixedEnd;
-        let total = 0, startColIndex:number , endColIndex:number = colLength;
+        let total = 0, startColIndex:number , endColIndex:number = colLength,scrollOffsetLeft:number;
 
         for (let i = fixedEnd; i < colLength; i++) {
 
             total += colMap[i].width;
             if (startColIndex === undefined && total >= scrollLeft_strat) {
                 startColIndex = i;
+                scrollOffsetLeft = total - colMap[i].width;
             }else if (total >= scrollLeft_end) {
                 endColIndex = i;
                 break;
             }
         }
 
-        return {startColIndex,endColIndex};
+        return {startColIndex,endColIndex,scrollOffsetLeft};
     }
 
     getRowBarWidth():number{
