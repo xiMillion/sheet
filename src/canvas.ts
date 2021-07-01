@@ -105,24 +105,23 @@ export default class Canvas{
 
         ctx.save();
         ctx.rect(fixedOffsetLeft, 0, boxWidth, fixedOffsetTop);
-        //ctx.clip();
+        ctx.clip();
         ctx.translate(-scrollLeft,0);
         ctx.font = `${fontSize}px ${fontFamily}`;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         ctx.strokeStyle = borderColor;
         ctx.fillStyle = fontColor;
-
+        
         ctx.beginPath();
-
         let totalw = fixedOffsetLeft + scrollOffsetLeft;
         for(let c = startColIndex; c < endColIndex; c ++){
             const oTotal = totalw;
             totalw += colMap[c].width;
-     
+            
             ctx.moveTo(totalw, 0);
             ctx.lineTo(totalw, colHeight);
-            ctx.stroke(); //可以去除
+            //  ctx.closePath(); //可以去除
 
            
             const {x,y} = getCenterGrid({
@@ -134,13 +133,13 @@ export default class Canvas{
             ctx.fillText(createCellPos(c), x, y);
             
         }
-      
-        ctx.restore();
+        
 
         //封底线
         ctx.moveTo(fixedOffsetLeft, fixedOffsetTop);
         ctx.lineTo(totalw, fixedOffsetTop);
         ctx.stroke();
+        ctx.restore();
 
     }
 
@@ -166,12 +165,13 @@ export default class Canvas{
         ctx.textBaseline = 'middle';
         ctx.strokeStyle = borderColor;
         ctx.fillStyle = fontColor;
-        ctx.beginPath();
+       
 
         let totalh = fixedOffsetTop + scrollOffsetTop;
         for(let r = startRowIndex; r < endRowIndex; r ++){
             const oTotal = totalh;
             totalh += rowMap[r].height;
+            ctx.beginPath();
             ctx.moveTo(0, totalh);
             ctx.lineTo(rowWidth, totalh);
             ctx.stroke();
@@ -186,11 +186,12 @@ export default class Canvas{
             
         }
 
-        ctx.restore();
+       
         //封底线
         ctx.moveTo(fixedOffsetLeft, colHeight);
         ctx.lineTo(fixedOffsetLeft, totalh);
         ctx.stroke();
+        ctx.restore();
 
     }
 
