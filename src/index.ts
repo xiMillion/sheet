@@ -6,8 +6,8 @@ import {extend} from './utils';
 const log = console.log;
 
 /**
- * 线宽 0.5 不生效
- * topleft 颜色不一样
+ * 线宽 0.5 不生效 ->  渲染机制 需加 0.5
+ * 字体模糊  -> 浏览器放大了  需设置倍数
  */
 
 class XSheet{
@@ -153,7 +153,7 @@ class XSheet{
 
         const rowLength:number = this.option.row.length;
         const rowMap:RowMap[] = this.option.row.map;
-        const rowHeight:number = this.option.style.row.height;
+        const rowHeight:number = this.option.row.style.height;
 
         for(let r = 0; r < rowLength; r ++){
             rowMap[r] = rowMap[r] || {
@@ -164,7 +164,7 @@ class XSheet{
 
         const colLength:number = this.option.col.length;
         const colMap:ColMap[] = this.option.col.map;
-        const colWidth:number = this.option.style.col.width;
+        const colWidth:number = this.option.col.style.width;
 
         for(let c = 0; c < colLength; c ++){
             colMap[c] = colMap[c] || {
@@ -221,8 +221,8 @@ class XSheet{
     }
 
     getRowBarWidth():number{
-        const rowWidth:number | string = this.option.style.row.width;
-        const fontSize = this.option.style.row.fontSize;
+        const rowWidth:number | string = this.option.row.style.width;
+        const fontSize = this.option.row.style.fontSize;
         return (rowWidth === 'maxw' ? (String(this.option.row.length + 1).length * (fontSize - 2)) : rowWidth as number);
     }
 
@@ -244,7 +244,7 @@ class XSheet{
         const fixedStart = option.row.fixedStart;
         const fixedEnd = option.row.fixedEnd;
 
-        let total:number = option.style.col.height;
+        let total:number = option.col.style.height;
         for(let i = fixedStart; i < fixedEnd; i ++){
             total += rowMap[i].height;
         }

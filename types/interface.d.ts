@@ -1,22 +1,31 @@
 
 
 declare interface Option {
-     //模式  默认 edit  只读 readonly
+     //模式  默认 edit  只读 readonly  禁用 disable
     mode?: 'edit' | 'readonly',
+    //单元格启用富文本
+    rich?: boolean,
     //行配置
     row?: Row,
     //列配置
     col?: Col,
-    //数据
-    dataSet?: Array<Array<Cell>>,
-     //单元格启用富文本
-    rich?: boolean,
-    //整体样式
-    style?: Style,
     //单元格
     cell?: CellOption,
+    //数据
+    dataSet?: Array<Array<Cell>>,
     //选区
     region?: Region,
+    //画布配置
+    canvas?:{
+        //画布背景
+        background?: string,
+        //画布外边框
+        outBorderColor?: string,
+        //画布内边框颜色
+        innerBorderColor?: string,
+    },
+    //样式列表
+    styles?: Array<CellStyle>
 }
 
 declare interface Row{
@@ -29,7 +38,9 @@ declare interface Row{
     //冻结行结束
     fixedEnd?: number,
     //自动延展
-    extension?: boolean
+    extension?: boolean,
+    //样式
+    style?: RowStyle
 }
 
 declare interface RowMap{
@@ -47,7 +58,9 @@ declare interface Col{
     //冻结行结束
     fixedEnd?: number,
     //自动延展
-    extension?: boolean
+    extension?: boolean,
+    //样式
+    style?: ColStyle
 }
 
 declare interface ColMap{
@@ -66,8 +79,8 @@ declare interface Cell{
     w: string,
     //公式值
     f: unknown,
-    //样式对象
-    s: CellStyle,
+    //样式索引
+    s: number,
     //展现类型  text\image\select\date\chart\
     t: 'text',
     //格式化
@@ -80,19 +93,21 @@ declare interface Cell{
 
 declare interface CellOption{
     //默认显示文字
-    value: unknown,
+    value?: unknown,
     //展示文本
-    weitex: string,
+    weitex?: string,
     //公式
-    formula:unknown,
+    formula?:unknown,
     //默认格式
-    type: string,
+    type?: string,
     //格式化 0-常规
-    format: number,
+    format?: number,
     //字符展现形式 0-超出截断  1-溢出  2-换行
-    txtFormType: 0 | 1 | 2,
+    txtFormType?: 0 | 1 | 2,
     //只读
-    readonly:number
+    readonly?:number,
+    //样式
+    style?: CellStyle
 }
 
 declare interface CellStyle{
@@ -101,7 +116,7 @@ declare interface CellStyle{
     //字体颜色
     fc: string,
     //字体大小
-    s: 12,
+    s: number,
     //字体格式
     f:string,
     //水平方式
@@ -124,82 +139,6 @@ declare interface CellStyle{
     or: [string,string,number],
 }
 
-declare interface Style{
-    //画布背景
-    background?: string,
-    //画布外边框
-    outBorderColor?: string,
-    //画布内边框颜色
-    innerBorderColor?: string,
-    //行样式
-    row?:{
-        //表头背景
-        bgColor?: string,
-        //字体大小
-        fontSize?: number,
-        //字体颜色
-        fontColor?: string,
-        //格式
-        fontFamily: string,
-        //行高
-        height?: number,
-        //拖动以及设置最小高
-        minHeight?: number,
-        //左侧表头宽  auto、maxw、number(px)
-        width?: number | string,
-    },
-    //列样式
-    col?:{
-        //表头背景
-        bgColor?: string,
-        //字体大小
-        fontSize?: number,
-        //字体颜色
-        fontColor?: string,
-        //格式
-        fontFamily: string,
-        //列宽
-        width?: number,
-        //拖动以及设置最小宽
-        minWidth?: number,
-        //上侧表头高  number(px)
-        height?: number,
-    },
-    //编辑区样式
-    edit?:{
-        borderColor: 'blur'
-    },
-    //单元格
-    cell: {
-        //背景
-        background: string,
-        //字体颜色
-        color: string,
-        //字体大小  px
-        fontSize: number,
-        //字体格式
-        fontFamily: string,
-        //水平方式
-        textAlign: string,
-        //垂直方式
-        verticalAlign: string,
-        //粗体
-        fontWeight: number,
-        //斜体
-        fontStyle: number,
-        //下划线
-        textDecoration: number,
-        
-        /* 边框 */
-        borderLeft:[string,string,number],
-        borderRight:[string,string,number],
-        borderTop: [string,string,number],
-        borderBottom: [string,string,number],
-        obliqueLeft: [string,string,number],
-        obliqueRight: [string,string,number],
-    }
-}
-
 declare interface Region{
     sr: number,
     sc: number,
@@ -212,4 +151,38 @@ declare interface Grid{
     x2: number,
     y1: number,
     y2: number
+}
+
+declare interface RowStyle{
+    //表头背景
+    bgColor?: string,
+    //字体大小
+    fontSize?: number,
+    //字体颜色
+    fontColor?: string,
+    //格式
+    fontFamily: string,
+    //行高
+    height?: number,
+    //拖动以及设置最小高
+    minHeight?: number,
+    //左侧表头宽  auto、maxw、number(px)
+    width?: number | string,
+}
+
+declare interface ColStyle{
+    //表头背景
+    bgColor?: string,
+    //字体大小
+    fontSize?: number,
+    //字体颜色
+    fontColor?: string,
+    //格式
+    fontFamily?: string,
+    //列宽
+    width?: number,
+    //拖动以及设置最小宽
+    minWidth?: number,
+    //上侧表头高  number(px)
+    height?: number,
 }

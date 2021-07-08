@@ -41,3 +41,13 @@ export const createCellPos = function (n:number):string {
     }
     return s;
 };
+
+export const getBorderStyle = function(type:string): [number,number] {
+    if(type === 'solid'){
+        return [2,2]
+    }else if(type === 'dashed'){
+        return [3,2]
+    }else{
+        return [0,0]
+    }
+}
