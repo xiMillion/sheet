@@ -1,6 +1,6 @@
 
 import XSheet from './index';
-import {getCenterGrid,createCellPos,getBorderStyle} from './utils';
+import {getCenterGrid,getGridPosition,createCellPos,getBorderStyle} from './utils';
 const log = console.log;
 
 export default class Canvas{
@@ -244,19 +244,17 @@ export default class Canvas{
                 //background
                 this.setBackground(oTotalw, oTotalh, colMap[c].width, rowMap[r].height,style.bc)
 
-                this.setBorder(oTotalw,oTotalh,totalw,totalh,style.bl,style.br,style.bt,style.bb)
+                //this.setBorder(oTotalw,oTotalh,totalw,totalh,style.bl,style.br,style.bt,style.bb)
 
                 ctx.font = `${style.s}px ${style.f}`;
-                ctx.textAlign = style.a;
-                ctx.textBaseline = style.v;
                 ctx.fillStyle = style.fc;
 
-                const {x,y} = getCenterGrid({
+                const {x,y} = getGridPosition(ctx,{
                     x1: oTotalw,
                     x2: totalw,
                     y1: oTotalh,
                     y2: totalh,
-                });
+                },style.a,style.v);
                 ctx.fillText(cell.w, x, y);
             }
         }

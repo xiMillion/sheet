@@ -120,9 +120,9 @@ declare interface CellStyle{
     //字体格式
     f:string,
     //水平方式
-    a: 'left' | 'right' | 'center',
+    a: AlignType,
     //垂直方式
-    v: 'top' | 'bottom' | 'middle',
+    v: Vertical,
     //粗体
     b: number,
     //斜体
