@@ -279,7 +279,8 @@ for(let r = 0; r < 1000; r ++){
     dataSet[r] = [];
     for(let c = 0; c < 100; c ++){
         dataSet[r].push({
-            w: `${r}-${c}`
+            w: `${r}-${c}`,
+            s: c % 2 === 0 ? 0 : 1
         })
     
     }

@@ -31,24 +31,18 @@ export const getGridPosition = function(ctx:CanvasRenderingContext2D,grid: Grid,
     let x:number, y:number;
 
     if(align === 'left'){
-        ctx.textAlign = 'left';
         x = grid.x1 + Span;
     }else if(align === 'right'){
-        ctx.textAlign = 'right';
         x = grid.x2 - Span;
     }else{
-        ctx.textAlign = 'center';
         x = grid.x1 + (grid.x2 - grid.x1) / 2;
     }
 
     if(vertical === 'top'){
-        ctx.textBaseline = 'top';
         y = grid.y2 + Span;
     }else if(vertical === 'bottom'){
-        ctx.textBaseline = 'bottom';
         y = grid.y2 - Span;
     }else{
-        ctx.textBaseline = 'middle';
         y = grid.y1 + (grid.y2 - grid.y1) / 2;
     }
 

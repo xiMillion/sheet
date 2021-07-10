@@ -157,7 +157,64 @@ export default {
         innerBorderColor: borderColor,
     },
     //样式列表
-    styles:[],
+    styles:[
+        {
+            //背景色
+            bc: 'transparent',
+            //字体颜色
+            fc: '#000',
+            //字体大小
+            s: 12,
+            //字体格式
+            f: '微软雅黑',
+            //水平方式
+            a: 'center',
+            //垂直方式
+            v: 'middle',
+            //粗体
+            b: 1,
+            //斜体
+            i: 1,
+            //下划线
+            u: 0,
+            //边框  style color width
+            bl: ['solid','red',1],
+            br: ['dashed','yellow',1],
+            bt: ['none','blue',1],
+            bb: ['ddaaad','green',1],
+            //斜线
+            ol: ['none','#000000',1],
+            or: ['none','#000000',1],
+        },
+        {
+            //背景色
+            bc: 'transparent',
+            //字体颜色
+            fc: '#222',
+            //字体大小
+            s: 20,
+            //字体格式
+            f: '微软雅黑',
+            //水平方式
+            a: 'left',
+            //垂直方式
+            v: 'middle',
+            //粗体
+            b: 0,
+            //斜体
+            i: 0,
+            //下划线
+            u: 1,
+            //边框  style color width
+            bl: ['solid','#f27611',1],
+            br: ['dashed','#888888',1],
+            bt: ['none','pink',1],
+            bb: ['ddaaad','cyan',1],
+            //斜线
+            ol: ['none','#000000',1],
+            or: ['none','#000000',1],
+        }
+    ],
 
     //条件格式
     //历史记录

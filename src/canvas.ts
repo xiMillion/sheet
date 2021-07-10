@@ -3,6 +3,21 @@ import XSheet from './index';
 import {getCenterGrid,getGridPosition,createCellPos,getBorderStyle} from './utils';
 const log = console.log;
 
+interface BgfcMap{
+    [prop:string]: {
+        bgList: Array<{s:CellStyle,x:number,y:number,w:number,h:number}>,
+        fcList: Array<{s:CellStyle,t: unknown,x1:number,y1:number,x2:number,y2:number}>
+    }
+}
+
+interface BorderMap{
+    [prop:string]: Array<{
+        s:CellStyle,
+        t: 'top' | 'left' | 'bottom' | 'right'
+        x1:number,y1:number,x2:number,y2:number
+    }>
+}
+
 export default class Canvas{
 
     static log = log;
@@ -35,15 +50,29 @@ export default class Canvas{
     render():void{
         this.clearCanvas();
 
-        const {option} = this.context;
+        const {ctx} = this;
+        const {option,boxHeight,boxWidth} = this.context;
+        const {fixedOffsetLeft,fixedOffsetTop,scrollTop,scrollLeft} = this.context;
+
         //set none dont renderLine
         const isRenderInnerBorder = option.canvas.innerBorderColor !== 'none';
         isRenderInnerBorder && this.renderGridLine();
+
         
         this.renderTopTh();
         this.renderLeftTh();
+        this.calculationPermutation((bgffColorMap,borderMap)=>{
+    
+            ctx.save();
+            ctx.rect(fixedOffsetLeft, fixedOffsetTop, boxWidth, boxHeight);
+            ctx.clip();
+            ctx.translate(-scrollLeft,-scrollTop);
 
-        this.renderTable();
+            this.renderTable(bgffColorMap,borderMap)
+
+            ctx.restore();
+
+        })
 
     }
 
@@ -68,6 +97,110 @@ export default class Canvas{
         //set background
         ctx.fillStyle = bgColor;
         ctx.fillRect(0, 0, width, height);
+    }
+    
+    calculationPermutation(callback:(bgffColorMap:BgfcMap,borderMap:BorderMap)=>void):void{
+        const {startColIndex,endRowIndex,startRowIndex,endColIndex,option} = this.context;
+        const {fixedOffsetLeft,fixedOffsetTop,scrollOffsetLeft,scrollOffsetTop} = this.context;
+        const rowMap:RowMap[] = option.row.map;
+        const colMap:ColMap[] = option.col.map;
+        const dataSet:Array<Array<Cell>> = option.dataSet;
+        const styles = option.styles;
+        const defaultStyle =option.cell.style;
+
+        //按颜色（字体，背景）分组、边框独立分组（颜色、宽度、setLineDash）
+
+        const bgffColorMap:BgfcMap = {} , borderMap:BorderMap = {};
+
+        let totalh:number = scrollOffsetTop + fixedOffsetTop, totalw:number;
+        for(let r = startRowIndex; r < endRowIndex; r ++){
+            const oTotalh = totalh;
+            totalw = scrollOffsetLeft + fixedOffsetLeft;
+            totalh += rowMap[r].height;
+
+            for(let c = startColIndex; c < endColIndex; c ++){
+                const cell = dataSet[r][c];
+                const oTotalw = totalw;
+                const style = styles[cell.s] || defaultStyle;
+
+                totalw += colMap[c].width;
+        
+                bgffColorMap[style.bc] = bgffColorMap[style.bc] || {
+                    bgList:[],
+                    fcList:[]
+                };
+
+                bgffColorMap[style.bc].bgList.push({
+                    s: style,
+                    x: oTotalw, 
+                    y: oTotalh, 
+                    w: colMap[c].width, 
+                    h: rowMap[r].height
+                });
+
+                bgffColorMap[style.fc] = bgffColorMap[style.fc] || {
+                    bgList:[],
+                    fcList:[]
+                };
+
+                bgffColorMap[style.fc].fcList.push({
+                    s: style,
+                    t: cell.w,
+                    x1: oTotalw,
+                    x2: totalw,
+                    y1: oTotalh,
+                    y2: totalh,
+                });
+
+                const _bl = style.bl.toString();
+                borderMap[_bl] = borderMap[_bl] || [];
+                borderMap[_bl].push({
+                    t: 'left',
+                    s:  style,
+                    x1: oTotalw,
+                    y1: oTotalh,
+                    x2: totalw,
+                    y2: totalh
+                });
+
+                const _bt = style.bt.toString();
+                borderMap[_bt] = borderMap[_bt] || [];
+                borderMap[_bt].push({
+                    t: 'top',
+                    s:  style,
+                    x1: oTotalw,
+                    y1: oTotalh,
+                    x2: totalw,
+                    y2: totalh
+                });
+
+                const _br = style.br.toString();
+                borderMap[_br] = borderMap[_br] || [];
+                borderMap[_br].push({
+                    t: 'right',
+                    s:  style,
+                    x1: oTotalw,
+                    y1: oTotalh,
+                    x2: totalw,
+                    y2: totalh
+                });
+
+                const _bb = style.bb.toString();
+                borderMap[_bb] = borderMap[_bb] || [];
+                borderMap[_bb].push({
+                    t: 'bottom',
+                    s:  style,
+                    x1: oTotalw,
+                    y1: oTotalh,
+                    x2: totalw,
+                    y2: totalh
+                });
+
+            }
+        }
+
+        callback(bgffColorMap,borderMap);
+
     }
 
     renderGridLine():void{
@@ -208,58 +341,65 @@ export default class Canvas{
 
     }
 
-    renderTable():void{
+    renderTable(bgffColorMap:BgfcMap,borderMap:BorderMap):void{
         const {ctx} = this;
-        const {startColIndex,endRowIndex,startRowIndex,endColIndex,option,boxHeight,boxWidth} = this.context;
-        const {fixedOffsetLeft,fixedOffsetTop,scrollOffsetLeft,scrollOffsetTop,scrollTop,scrollLeft} = this.context;
-        const rowMap:RowMap[] = option.row.map;
-        const colMap:ColMap[] = option.col.map;
-        const dataSet:Array<Array<Cell>> = option.dataSet;
-        const styles = option.styles;
-        const defaultStyle =option.cell.style;
-       
 
-        let totalh:number = scrollOffsetTop + fixedOffsetTop, totalw:number;
+        for(const color in bgffColorMap){
+            const bgList = bgffColorMap[color].bgList;
+            const fcList = bgffColorMap[color].fcList;
 
-        ctx.save();
+            ctx.fillStyle = color;
 
-        ctx.rect(fixedOffsetLeft, fixedOffsetTop, boxWidth, boxHeight);
-        ctx.clip();
+            for(let i = 0 , length = bgList.length; i < length; i ++){
+                const item = bgList[i];
+                ctx.fillRect(item.x,item.y,item.w,item.h);
+            }
 
-        ctx.translate(-scrollLeft,-scrollTop);
-
-        for(let r = startRowIndex; r < endRowIndex; r ++){
-            const oTotalh = totalh;
-            totalw = scrollOffsetLeft + fixedOffsetLeft;
-            totalh += rowMap[r].height;
-
-            for(let c = startColIndex; c < endColIndex; c ++){
-                const cell = dataSet[r][c];
-                const oTotalw = totalw;
-                const style = styles[cell.s] || defaultStyle;
-
-                totalw += colMap[c].width;
-        
-
-                //background
-                this.setBackground(oTotalw, oTotalh, colMap[c].width, rowMap[r].height,style.bc)
-
-                //this.setBorder(oTotalw,oTotalh,totalw,totalh,style.bl,style.br,style.bt,style.bb)
-
+            for(let i = 0 , length = fcList.length; i < length; i ++){
+                const item = fcList[i] , style = item.s;
                 ctx.font = `${style.s}px ${style.f}`;
-                ctx.fillStyle = style.fc;
+                ctx.textBaseline = style.v;
+                ctx.textAlign = style.a;
 
                 const {x,y} = getGridPosition(ctx,{
-                    x1: oTotalw,
-                    x2: totalw,
-                    y1: oTotalh,
-                    y2: totalh,
+                    x1: item.x1,
+                    x2: item.x2,
+                    y1: item.y1,
+                    y2: item.y2,
                 },style.a,style.v);
-                ctx.fillText(cell.w, x, y);
+                ctx.fillText(item.t as string, x, y);
             }
         }
 
-        ctx.restore();
+        for(const k in borderMap){
+            const bconfig = k.split(',');
+
+            if(bconfig[0] === 'none') continue;
+
+            const list = borderMap[k];
+            ctx.strokeStyle = bconfig[1];
+            ctx.setLineDash(getBorderStyle(bconfig[0]));
+            ctx.lineWidth = parseInt(bconfig[2]);
+            ctx.beginPath();
+            for(let i = 0 , length = list.length; i < length; i ++){
+                const {t,x1,x2,y1,y2} = list[i];
+                if(t === 'top'){
+                    this.moveTo(x1, y1);
+                    this.lineTo(x2, y1);
+                }else if(t === 'bottom'){
+                    this.moveTo(x1, y2);
+                    this.lineTo(x2, y2); 
+                }else if(t === 'left'){
+                    this.moveTo(x1, y1);
+                    this.lineTo(x1, y2);
+                }else{
+                    this.moveTo(x2, y1);
+                    this.lineTo(x2, y2);
+                }
+            }
+            ctx.stroke();
+        }
+
     }
 
     setBackground(x:number,y:number,w:number,h:number,color:string):void{
