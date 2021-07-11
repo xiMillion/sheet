@@ -106,9 +106,9 @@ export default {
             //字体颜色
             fc: '#000',
             //字体大小
-            s: 12,
+            fs: 12,
             //字体格式
-            f: '微软雅黑',
+            ff: '微软雅黑',
             //水平方式
             a: 'center',
             //垂直方式
@@ -119,6 +119,8 @@ export default {
             i: 0,
             //下划线
             u: 0,
+            //中划线
+            s: 0,
             //边框  style color width
             bl: ['none','#000000',1],
             br: ['none','#000000',1],
@@ -163,19 +165,21 @@ export default {
             //字体颜色
             fc: '#000',
             //字体大小
-            s: 12,
+            fs: 12,
             //字体格式
-            f: '微软雅黑',
+            ff: '微软雅黑',
             //水平方式
-            a: 'center',
+            a: 'right',
             //垂直方式
-            v: 'middle',
+            v: 'alphabetic',
             //粗体
             b: 1,
             //斜体
             i: 1,
             //下划线
             u: 0,
+            //中划线
+            s: 1,
             //边框  style color width
             bl: ['solid','red',1],
             br: ['dashed','yellow',1],
@@ -191,19 +195,21 @@ export default {
             //字体颜色
             fc: '#222',
             //字体大小
-            s: 20,
+            fs: 20,
             //字体格式
-            f: '微软雅黑',
+            ff: '微软雅黑',
             //水平方式
             a: 'left',
             //垂直方式
-            v: 'middle',
+            v: 'alphabetic',
             //粗体
             b: 0,
             //斜体
-            i: 0,
+            i: 1,
             //下划线
             u: 1,
+            //中划线
+            s: 1,
             //边框  style color width
             bl: ['solid','#f27611',1],
             br: ['dashed','#888888',1],

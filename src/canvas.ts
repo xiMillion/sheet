@@ -1,12 +1,12 @@
 
 import XSheet from './index';
-import {getCenterGrid,getGridPosition,createCellPos,getBorderStyle} from './utils';
+import {getCenterGrid,getGridPosition,createCellPos,getBorderStyle,getTextReact} from './utils';
 const log = console.log;
 
 interface BgfcMap{
     [prop:string]: {
         bgList: Array<{s:CellStyle,x:number,y:number,w:number,h:number}>,
-        fcList: Array<{s:CellStyle,t: unknown,x1:number,y1:number,x2:number,y2:number}>
+        fcList: Array<{s:CellStyle,t: unknown,x:number,y:number}>
     }
 }
 
@@ -270,14 +270,23 @@ export default class Canvas{
                     fcList:[]
                 };
 
-                bgffColorMap[style.fc].fcList.push({
-                    s: style,
-                    t: cell.w,
+                const ffPosition = getGridPosition({
                     x1: oTotalw,
                     x2: totalw,
                     y1: oTotalh,
                     y2: totalh,
+                },style.a,style.v);
+
+                bgffColorMap[style.fc].fcList.push({
+                    s: style,
+                    t: cell.w,
+                    x: ffPosition.x,
+                    y: ffPosition.y
                 });
+
+                const textRect = getTextReact(cell,style,colMap[c].width);
+                cell._width = textRect.width;
+                cell._height = textRect.height;
 
                 const _bl = style.bl.toString();
                 borderMap[_bl] = borderMap[_bl] || [];
@@ -322,6 +331,20 @@ export default class Canvas{
                     x2: totalw,
                     y2: totalh
                 });
+
+                //下划线
+                // if(style.u){
+                //     const key = `solid,${style.fc},${style.b ? 2 : 1}`;
+                //     borderMap[key] = borderMap[key] || [];
+                //     borderMap[key].push({
+                //         t: 'top',
+                //         s:  style,
+                //         x1: totalw,
+                //         y1: totalh + style.fs / 2,
+                //         x2: totalh + textRect.width,
+                //         y2: null
+                //     });
+                // }
 
             }
         }
@@ -491,17 +514,12 @@ export default class Canvas{
 
             for(let i = 0 , length = fcList.length; i < length; i ++){
                 const item = fcList[i] , style = item.s;
-                ctx.font = `${style.s}px ${style.f}`;
+                ctx.font = `${style.i ? 'italic' : ''} ${style.fs}px ${style.ff} ${style.b ? 'bold' : ''}`;
                 ctx.textBaseline = style.v;
                 ctx.textAlign = style.a;
 
-                const {x,y} = getGridPosition(ctx,{
-                    x1: item.x1,
-                    x2: item.x2,
-                    y1: item.y1,
-                    y2: item.y2,
-                },style.a,style.v);
-                ctx.fillText(item.t as string, x, y);
+                
+                ctx.fillText(item.t as string, item.x, item.y);
             }
         }
 
@@ -536,43 +554,4 @@ export default class Canvas{
 
     }
 
-    setBackground(x:number,y:number,w:number,h:number,color:string):void{
-        const {ctx} = this;
-        ctx.fillStyle = color;
-        ctx.fillRect(x,y,w,h);
-    }
-    
-    setBorder(x1:number,y1:number,x2:number,y2:number,bl:BorderType,br:BorderType,bt:BorderType,bb:BorderType):void{
-        const {ctx} = this;
-        //left
-        ctx.beginPath()
-        ctx.strokeStyle = 'red';
-        ctx.setLineDash(getBorderStyle(bl[0]))
-        this.moveTo(x1, y1);
-        this.lineTo(x1, y2);
-        ctx.stroke();
-        //right
-        ctx.beginPath()
-        ctx.strokeStyle = 'yellow';
-        ctx.setLineDash(getBorderStyle(br[0]))
-        this.moveTo(x2, y1);
-        this.lineTo(x2, y2);
-        ctx.stroke();
-        //top
-        ctx.beginPath()
-        ctx.strokeStyle = 'blue';
-        ctx.setLineDash(getBorderStyle(bt[0]))
-        this.moveTo(x1, y1);
-        this.lineTo(x2, y1);
-        ctx.stroke();
-        //top
-        ctx.beginPath()
-        ctx.strokeStyle = 'green';
-        ctx.setLineDash(getBorderStyle(bb[0]))
-        this.moveTo(x1, y2);
-        this.lineTo(x2, y2); 
-
-        ctx.stroke();
-
-    }
 }

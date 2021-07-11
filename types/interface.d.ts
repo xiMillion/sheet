@@ -91,7 +91,11 @@ declare interface Cell{
     //字符展现形式 0-超出截断  1-溢出  2-换行
     tt: 0 | 1 | 2,
     //是否只读
-    ry: number
+    ry: number,
+    //宽度
+    _width?: number
+    //高度,
+    _height?: number
 }
 
 declare interface CellOption{
@@ -119,9 +123,9 @@ declare interface CellStyle{
     //字体颜色
     fc: string,
     //字体大小
-    s: number,
+    fs: number,
     //字体格式
-    f:string,
+    ff:string,
     //水平方式
     a: AlignType,
     //垂直方式
@@ -132,6 +136,8 @@ declare interface CellStyle{
     i: number,
     //下划线
     u: number,
+    //中划线
+    s: number,
     //边框  style color width
     bl:[string,string,number],
     br: [string,string,number],
