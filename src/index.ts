@@ -86,6 +86,9 @@ class XSheet{
         this.generateFrame();
         //next 2
         this.setScrollStyle();
+
+        //re fixed
+        this.Canvas.renderFixedTable();
         
     }
 
@@ -290,13 +293,13 @@ new XSheet('#box',{
     dataSet,
     row:{
         length: 1000,
-        fixedStart: 10,
-        fixedEnd: 20
+        fixedStart: 0,
+        fixedEnd: 0
     },
     col:{
         length: 100,
-        fixedStart: 10,
-        fixedEnd: 20
+        fixedStart: 0,
+        fixedEnd: 0
     }
 })
 

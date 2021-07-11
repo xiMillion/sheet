@@ -23,6 +23,9 @@ declare interface Option {
         outBorderColor?: string,
         //画布内边框颜色
         innerBorderColor?: string,
+        //固定行列样式
+        fixedLineColor?:string,
+        fixedLineWidth?:number
     },
     //样式列表
     styles?: Array<CellStyle>
@@ -154,8 +157,6 @@ declare interface Grid{
 }
 
 declare interface RowStyle{
-    //表头背景
-    bgColor?: string,
     //字体大小
     fontSize?: number,
     //字体颜色
@@ -171,8 +172,6 @@ declare interface RowStyle{
 }
 
 declare interface ColStyle{
-    //表头背景
-    bgColor?: string,
     //字体大小
     fontSize?: number,
     //字体颜色

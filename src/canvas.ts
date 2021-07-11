@@ -27,6 +27,9 @@ export default class Canvas{
     context: XSheet;
     //画布上下文
     ctx: CanvasRenderingContext2D;
+    //旧的滚动信息
+    oldScrollTop: number;
+    oldScrollLeft: number;
 
     constructor(context: XSheet){
 
@@ -48,64 +51,82 @@ export default class Canvas{
     }
 
     render():void{
-        this.clearCanvas();
+        //this.clearCanvas();
 
         const {ctx} = this;
         const {option,boxHeight,boxWidth,rowBarWidth} = this.context;
         const {fixedOffsetLeft,fixedOffsetTop,scrollTop,scrollLeft,scrollOffsetTop,scrollOffsetLeft} = this.context;
         const {startColIndex,endRowIndex,startRowIndex,endColIndex} = this.context;
         const colHeight = option.col.style.height;
+        const fixedLineColor = option.canvas.fixedLineColor;
+        const fixedLineWidth = option.canvas.fixedLineWidth;
 
         const rowConfig = option.row;
         const colConfig = option.col;
+
+
+        if(this.oldScrollLeft !== screenLeft){
+            ctx.clearRect(fixedOffsetLeft + 1, 0, boxWidth, fixedOffsetTop);
+            this.calculationPermutation({
+                startColIndex, 
+                endColIndex,
+                startRowIndex: rowConfig.fixedStart,
+                endRowIndex: rowConfig.fixedEnd,
+                offsetLeft: scrollOffsetLeft + fixedOffsetLeft,
+                offsetTop: colHeight,
+            },(bgffColorMap,borderMap)=>{
+        
+                ctx.save();
+                ctx.rect(fixedOffsetLeft, 0, boxWidth, fixedOffsetTop + 1);//解决底线消失问题
+                ctx.clip();
+                ctx.translate(-scrollLeft,0);
+    
+                this.renderTopTh({
+                    startColIndex,
+                    endColIndex,
+                    offsetLeft: fixedOffsetLeft + scrollOffsetLeft,
+                    fixedOffsetLeft
+                });
+                this.renderTable(bgffColorMap,borderMap)
+    
+                ctx.restore();
+    
+            });
+        }
+    
+        if(this.oldScrollTop !== scrollTop){
+            ctx.clearRect(0, fixedOffsetTop + 1, fixedOffsetLeft, boxHeight);
+            this.calculationPermutation({
+                startColIndex: colConfig.fixedStart, 
+                endColIndex: colConfig.fixedEnd,
+                startRowIndex,
+                endRowIndex,
+                offsetLeft: rowBarWidth,
+                offsetTop: scrollOffsetTop + fixedOffsetTop,
+            },(bgffColorMap,borderMap)=>{
+        
+                ctx.save();
+                ctx.rect(0, fixedOffsetTop, fixedOffsetLeft + 1, boxHeight);//解决底线消失问题
+                ctx.clip();
+                ctx.translate(0,-scrollTop);
+                this.renderLeftTh({
+                    startRowIndex,
+                    endRowIndex,
+                    offsetTop: fixedOffsetTop + scrollOffsetTop,
+                    fixedOffsetTop
+                });
+                this.renderTable(bgffColorMap,borderMap)
+    
+                ctx.restore();
+    
+            });
+        }
 
         //set none dont renderLine
         const isRenderInnerBorder = option.canvas.innerBorderColor !== 'none';
         isRenderInnerBorder && this.renderGridLine();
 
-        this.calculationPermutation({
-            startColIndex, 
-            endColIndex,
-            startRowIndex: rowConfig.fixedStart,
-            endRowIndex: rowConfig.fixedEnd,
-            offsetLeft: scrollOffsetLeft + fixedOffsetLeft,
-            offsetTop: colHeight,
-        },(bgffColorMap,borderMap)=>{
-    
-            ctx.save();
-            ctx.rect(fixedOffsetLeft, 0, boxWidth, fixedOffsetTop + 1);//解决底线消失问题
-            ctx.clip();
-            ctx.translate(-scrollLeft,0);
-
-            this.renderTopTh();
-            this.renderTable(bgffColorMap,borderMap)
-
-            ctx.restore();
-
-        });
-
-        this.calculationPermutation({
-            startColIndex: colConfig.fixedStart, 
-            endColIndex: colConfig.fixedEnd,
-            startRowIndex,
-            endRowIndex,
-            offsetLeft: rowBarWidth,
-            offsetTop: scrollOffsetTop + fixedOffsetTop,
-        },(bgffColorMap,borderMap)=>{
-    
-            ctx.save();
-            ctx.rect(0, fixedOffsetTop, fixedOffsetLeft + 1, boxHeight);//解决底线消失问题
-            ctx.clip();
-            ctx.translate(0,-scrollTop);
-
-            this.renderLeftTh();
-            this.renderTable(bgffColorMap,borderMap)
-
-            ctx.restore();
-
-        });
-
-
+        ctx.clearRect(fixedOffsetLeft + 1, fixedOffsetTop + 1, boxWidth, boxHeight);
         this.calculationPermutation({
             startColIndex,endRowIndex,startRowIndex,endColIndex,
             offsetLeft: scrollOffsetLeft + fixedOffsetLeft,
@@ -121,7 +142,30 @@ export default class Canvas{
 
             ctx.restore();
 
-        })
+        });
+
+
+        //封底线
+        ctx.strokeStyle = fixedLineColor;
+        ctx.lineWidth = fixedLineWidth;
+        if(colConfig.fixedEnd){
+            ctx.beginPath();
+            this.moveTo(fixedOffsetLeft, 0);
+            this.lineTo(fixedOffsetLeft, boxHeight);
+            ctx.stroke();
+        }
+
+
+        //封底线
+        if(rowConfig.fixedEnd){
+            ctx.beginPath();
+            this.moveTo(0, fixedOffsetTop);
+            this.lineTo(boxWidth, fixedOffsetTop);
+            ctx.stroke();
+        }
+
+        this.oldScrollTop = scrollTop;
+        this.oldScrollLeft = scrollLeft;
 
     }
 
@@ -146,6 +190,40 @@ export default class Canvas{
         //set background
         ctx.fillStyle = bgColor;
         ctx.fillRect(0, 0, width, height);
+    }
+
+    renderFixedTable():void{
+        const {option,rowBarWidth} = this.context;
+        const colHeight = option.col.style.height;
+
+        const rowConfig = option.row;
+        const colConfig = option.col;
+
+        //fixed
+        this.renderLeftTh({
+            startRowIndex: rowConfig.fixedStart,
+            endRowIndex: rowConfig.fixedEnd,
+            offsetTop: colHeight,
+            fixedOffsetTop: 0
+        });
+
+        this.renderTopTh({
+            startColIndex: colConfig.fixedStart,
+            endColIndex: colConfig.fixedEnd,
+            offsetLeft: rowBarWidth,
+            fixedOffsetLeft: 0
+        });
+
+        if(colConfig.fixedEnd || rowConfig.fixedEnd){
+            this.calculationPermutation({
+                startColIndex:colConfig.fixedStart,
+                endColIndex:colConfig.fixedEnd,
+                endRowIndex: rowConfig.fixedEnd,
+                startRowIndex: rowConfig.fixedStart,
+                offsetLeft: rowBarWidth,
+                offsetTop: colHeight,
+            },this.renderTable.bind(this))
+        }
     }
     
     calculationPermutation(config:{[prop:string]:any,bgffColorMap?:BgfcMap,borderMap?:BorderMap},callback:(bgffColorMap:BgfcMap,borderMap:BorderMap)=>void):void{
@@ -314,10 +392,10 @@ export default class Canvas{
         ctx.restore();
     }
 
-    renderTopTh(): void{
+    renderTopTh(config:{[prop:string]:any}): void{
         const {ctx} = this;
-        const {option,startColIndex,endColIndex} = this.context;
-        const {fixedOffsetLeft,scrollOffsetLeft} = this.context;
+        const {startColIndex,endColIndex,offsetLeft,fixedOffsetLeft} = config;
+        const {option} = this.context;
        
         const fontSize:number = option.col.style.fontSize;
         const fontFamily:string = option.col.style.fontFamily;
@@ -331,7 +409,7 @@ export default class Canvas{
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         
-        let totalw = fixedOffsetLeft + scrollOffsetLeft;
+        let totalw = offsetLeft;
         for(let c = startColIndex; c < endColIndex; c ++){
             const oTotal = totalw;
             totalw += colMap[c].width;
@@ -355,10 +433,11 @@ export default class Canvas{
 
     }
 
-    renderLeftTh():void{
+    renderLeftTh(config:{[prop:string]:any}):void{
         const {ctx} = this;
-        const {option,startRowIndex,endRowIndex,rowBarWidth} = this.context;
-        const {fixedOffsetLeft,fixedOffsetTop,scrollOffsetTop} = this.context;
+        const {startRowIndex,endRowIndex,offsetTop,fixedOffsetTop} = config;
+        const {option,rowBarWidth} = this.context;
+        const {fixedOffsetLeft} = this.context;
         const fontSize:number = option.row.style.fontSize;
         const fontFamily:string = option.row.style.fontFamily;
         const fontColor:string = option.row.style.fontColor;
@@ -371,7 +450,7 @@ export default class Canvas{
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
 
-        let totalh = fixedOffsetTop + scrollOffsetTop;
+        let totalh = offsetTop;
         for(let r = startRowIndex; r < endRowIndex; r ++){
             const oTotal = totalh;
             totalh += rowMap[r].height;

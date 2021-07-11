@@ -29,8 +29,6 @@ export default {
         //自动延展
         extension: true,
         style:{
-            //表头背景
-            bgColor: backgroundColor,
             //字体大小
             fontSize: 12,
             //字体颜色
@@ -71,8 +69,6 @@ export default {
         extension: true,
         //样式
         style:{
-            //表头背景
-            bgColor: backgroundColor,
             //字体大小
             fontSize: 12,
             //字体颜色
@@ -155,6 +151,9 @@ export default {
         outBorderColor: borderColor,
         //画布内边框颜色
         innerBorderColor: borderColor,
+        //固定行列样式
+        fixedLineColor: '#0066ff',
+        fixedLineWidth: 1
     },
     //样式列表
     styles:[
