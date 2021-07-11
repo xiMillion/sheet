@@ -51,17 +51,66 @@ export default class Canvas{
         this.clearCanvas();
 
         const {ctx} = this;
-        const {option,boxHeight,boxWidth} = this.context;
-        const {fixedOffsetLeft,fixedOffsetTop,scrollTop,scrollLeft} = this.context;
+        const {option,boxHeight,boxWidth,rowBarWidth} = this.context;
+        const {fixedOffsetLeft,fixedOffsetTop,scrollTop,scrollLeft,scrollOffsetTop,scrollOffsetLeft} = this.context;
+        const {startColIndex,endRowIndex,startRowIndex,endColIndex} = this.context;
+        const colHeight = option.col.style.height;
+
+        const rowConfig = option.row;
+        const colConfig = option.col;
 
         //set none dont renderLine
         const isRenderInnerBorder = option.canvas.innerBorderColor !== 'none';
         isRenderInnerBorder && this.renderGridLine();
 
-        
-        this.renderTopTh();
-        this.renderLeftTh();
-        this.calculationPermutation((bgffColorMap,borderMap)=>{
+        this.calculationPermutation({
+            startColIndex, 
+            endColIndex,
+            startRowIndex: rowConfig.fixedStart,
+            endRowIndex: rowConfig.fixedEnd,
+            offsetLeft: scrollOffsetLeft + fixedOffsetLeft,
+            offsetTop: colHeight,
+        },(bgffColorMap,borderMap)=>{
+    
+            ctx.save();
+            ctx.rect(fixedOffsetLeft, 0, boxWidth, fixedOffsetTop + 1);//解决底线消失问题
+            ctx.clip();
+            ctx.translate(-scrollLeft,0);
+
+            this.renderTopTh();
+            this.renderTable(bgffColorMap,borderMap)
+
+            ctx.restore();
+
+        });
+
+        this.calculationPermutation({
+            startColIndex: colConfig.fixedStart, 
+            endColIndex: colConfig.fixedEnd,
+            startRowIndex,
+            endRowIndex,
+            offsetLeft: rowBarWidth,
+            offsetTop: scrollOffsetTop + fixedOffsetTop,
+        },(bgffColorMap,borderMap)=>{
+    
+            ctx.save();
+            ctx.rect(0, fixedOffsetTop, fixedOffsetLeft + 1, boxHeight);//解决底线消失问题
+            ctx.clip();
+            ctx.translate(0,-scrollTop);
+
+            this.renderLeftTh();
+            this.renderTable(bgffColorMap,borderMap)
+
+            ctx.restore();
+
+        });
+
+
+        this.calculationPermutation({
+            startColIndex,endRowIndex,startRowIndex,endColIndex,
+            offsetLeft: scrollOffsetLeft + fixedOffsetLeft,
+            offsetTop: scrollOffsetTop + fixedOffsetTop,
+        },(bgffColorMap,borderMap)=>{
     
             ctx.save();
             ctx.rect(fixedOffsetLeft, fixedOffsetTop, boxWidth, boxHeight);
@@ -99,9 +148,9 @@ export default class Canvas{
         ctx.fillRect(0, 0, width, height);
     }
     
-    calculationPermutation(callback:(bgffColorMap:BgfcMap,borderMap:BorderMap)=>void):void{
-        const {startColIndex,endRowIndex,startRowIndex,endColIndex,option} = this.context;
-        const {fixedOffsetLeft,fixedOffsetTop,scrollOffsetLeft,scrollOffsetTop} = this.context;
+    calculationPermutation(config:{[prop:string]:any,bgffColorMap?:BgfcMap,borderMap?:BorderMap},callback:(bgffColorMap:BgfcMap,borderMap:BorderMap)=>void):void{
+        const {startColIndex,endRowIndex,startRowIndex,endColIndex,offsetLeft,offsetTop,bgffColorMap = {},borderMap = {}} = config;
+        const {option} = this.context;
         const rowMap:RowMap[] = option.row.map;
         const colMap:ColMap[] = option.col.map;
         const dataSet:Array<Array<Cell>> = option.dataSet;
@@ -110,12 +159,12 @@ export default class Canvas{
 
         //按颜色（字体，背景）分组、边框独立分组（颜色、宽度、setLineDash）
 
-        const bgffColorMap:BgfcMap = {} , borderMap:BorderMap = {};
+        //const bgffColorMap:BgfcMap = {} , borderMap:BorderMap = {};
 
-        let totalh:number = scrollOffsetTop + fixedOffsetTop, totalw:number;
+        let totalh:number = offsetTop, totalw:number;
         for(let r = startRowIndex; r < endRowIndex; r ++){
             const oTotalh = totalh;
-            totalw = scrollOffsetLeft + fixedOffsetLeft;
+            totalw = offsetLeft;
             totalh += rowMap[r].height;
 
             for(let c = startColIndex; c < endColIndex; c ++){
@@ -205,69 +254,87 @@ export default class Canvas{
 
     renderGridLine():void{
         const {ctx} = this;
-        const {startColIndex,endRowIndex,startRowIndex,endColIndex,option} = this.context;
+        const {startColIndex,endRowIndex,startRowIndex,endColIndex,option,rowBarWidth} = this.context;
         const {fixedOffsetLeft,fixedOffsetTop,scrollLeft,scrollTop,scrollOffsetLeft,scrollOffsetTop} = this.context;
         const rowMap:RowMap[] = option.row.map;
+        const rowFixedStart = option.row.fixedStart;
+        const rowFixedEnd = option.row.fixedEnd;
         const colMap:ColMap[] = option.col.map;
+        const colFixedStart = option.col.fixedStart;
+        const colFixedEnd = option.col.fixedEnd;
+
+        const colHeight = option.col.style.height;
         const borderColor:string = option.canvas.innerBorderColor;
         const boxWidth:number = this.context.boxWidth , boxHeight:number = this.context.boxHeight;
         
-        const offsetLeft:number = fixedOffsetLeft + scrollOffsetLeft , offsetTop:number = fixedOffsetTop + scrollOffsetTop;
+
+        const lineWidth = boxWidth + scrollLeft , lineHeight = boxHeight + scrollTop;
+
+        ctx.strokeStyle = borderColor;
+        let totalh = colHeight , totalw = rowBarWidth;
+
+        //row
+        ctx.beginPath();
+        this.moveTo(0, colHeight);
+        this.lineTo(lineWidth, colHeight);
+        //fixed
+        for(let r = rowFixedStart; r < rowFixedEnd; r++){
+            totalh += rowMap[r].height;
+            this.moveTo(0, totalh);
+            this.lineTo(lineWidth, totalh);
+        }
+
+        //col
+        this.moveTo(rowBarWidth, 0);
+        this.lineTo(rowBarWidth, lineHeight);
+        //fixed
+        for(let c = colFixedStart; c < colFixedEnd; c++){
+            totalw += colMap[c].width;
+            this.moveTo(totalw, 0);
+            this.lineTo(totalw, lineHeight);
+        }
 
         ctx.save();
         ctx.translate(-scrollLeft,-scrollTop);
-        ctx.strokeStyle = borderColor;
-        ctx.beginPath();
-        let totalh = offsetTop , totalw = offsetLeft;
+
+        //table
+        totalh = fixedOffsetTop + scrollOffsetTop , totalw = fixedOffsetLeft + scrollOffsetLeft;
         for(let r = startRowIndex; r < endRowIndex; r++){
             totalh += rowMap[r].height;
-            this.moveTo(offsetLeft, totalh);
-            this.lineTo(boxWidth + scrollLeft, totalh);
+            this.moveTo(0, totalh);
+            this.lineTo(lineWidth, totalh);
         }
         for(let c = startColIndex; c < endColIndex; c++){
             totalw += colMap[c].width;
-            this.moveTo(totalw, offsetTop);
-            this.lineTo(totalw, boxHeight + scrollTop);
+            this.moveTo(totalw, 0);
+            this.lineTo(totalw, lineHeight);
         }
+
         ctx.stroke();
         ctx.restore();
     }
 
-    renderTopTh():void{
+    renderTopTh(): void{
         const {ctx} = this;
-        const {option,startColIndex,endColIndex,boxWidth} = this.context;
-        const {fixedOffsetLeft,fixedOffsetTop,scrollOffsetLeft,scrollLeft} = this.context;
-        //const bgColor = option.style.col.bgColor;
+        const {option,startColIndex,endColIndex} = this.context;
+        const {fixedOffsetLeft,scrollOffsetLeft} = this.context;
+       
         const fontSize:number = option.col.style.fontSize;
         const fontFamily:string = option.col.style.fontFamily;
         const fontColor:string = option.col.style.fontColor;
-        const borderColor:string = option.canvas.innerBorderColor;
         const colMap:ColMap[] = option.col.map;
         const colHeight = option.col.style.height;
-        //const fixedStart = option.row.fixedStart;
-        //const fixedEnd = option.row.fixedEnd;
+        const borderColor:string = option.canvas.innerBorderColor;
 
-        ctx.save();
-        //解决底线消失问题
-        ctx.rect(fixedOffsetLeft, 0, boxWidth, fixedOffsetTop + 1);
-        ctx.clip();
-        ctx.translate(-scrollLeft,0);
+        ctx.fillStyle = fontColor;
         ctx.font = `${fontSize}px ${fontFamily}`;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        ctx.strokeStyle = borderColor;
-        ctx.fillStyle = fontColor;
         
-        ctx.beginPath();
         let totalw = fixedOffsetLeft + scrollOffsetLeft;
         for(let c = startColIndex; c < endColIndex; c ++){
             const oTotal = totalw;
             totalw += colMap[c].width;
-            
-            this.moveTo(totalw, 0);
-            this.lineTo(totalw, colHeight);
-            //  ctx.closePath(); //可以去除
-
            
             const {x,y} = getCenterGrid({
                 x1: oTotal,
@@ -278,49 +345,36 @@ export default class Canvas{
             ctx.fillText(createCellPos(c), x, y);
             
         }
-        
 
         //封底线
-        this.moveTo(fixedOffsetLeft, fixedOffsetTop);
-        this.lineTo(totalw, fixedOffsetTop);
+        ctx.strokeStyle = borderColor;
+        ctx.beginPath();
+        this.moveTo(fixedOffsetLeft, colHeight);
+        this.lineTo(totalw, colHeight);
         ctx.stroke();
-        ctx.restore();
 
     }
 
     renderLeftTh():void{
         const {ctx} = this;
-        const {option,startRowIndex,endRowIndex,rowBarWidth,boxHeight} = this.context;
-        const {fixedOffsetLeft,fixedOffsetTop,scrollOffsetTop,scrollTop} = this.context;
+        const {option,startRowIndex,endRowIndex,rowBarWidth} = this.context;
+        const {fixedOffsetLeft,fixedOffsetTop,scrollOffsetTop} = this.context;
         const fontSize:number = option.row.style.fontSize;
         const fontFamily:string = option.row.style.fontFamily;
         const fontColor:string = option.row.style.fontColor;
         const borderColor:string = option.canvas.innerBorderColor;
         const rowMap:RowMap[] = option.row.map;
         const rowWidth:number = rowBarWidth;
-        const colHeight = option.col.style.height;
 
-        ctx.save();
-        //解决底线消失问题
-        ctx.rect(0, fixedOffsetTop, fixedOffsetLeft + 1, boxHeight);
-        ctx.clip();
-
-        ctx.translate(0,-scrollTop);
+        ctx.fillStyle = fontColor;
         ctx.font = `${fontSize}px ${fontFamily}`;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        ctx.strokeStyle = borderColor;
-        ctx.fillStyle = fontColor;
-       
 
         let totalh = fixedOffsetTop + scrollOffsetTop;
         for(let r = startRowIndex; r < endRowIndex; r ++){
             const oTotal = totalh;
             totalh += rowMap[r].height;
-            ctx.beginPath();
-            this.moveTo(0, totalh);
-            this.lineTo(rowWidth, totalh);
-            ctx.stroke();
 
             const {x,y} = getCenterGrid({
                 x1: 0,
@@ -334,10 +388,11 @@ export default class Canvas{
 
        
         //封底线
-        this.moveTo(fixedOffsetLeft, colHeight);
+        ctx.strokeStyle = borderColor;
+        ctx.beginPath();
+        this.moveTo(fixedOffsetLeft, fixedOffsetTop);
         this.lineTo(fixedOffsetLeft, totalh);
         ctx.stroke();
-        ctx.restore();
 
     }
 

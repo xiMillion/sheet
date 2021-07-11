@@ -289,10 +289,14 @@ for(let r = 0; r < 1000; r ++){
 new XSheet('#box',{
     dataSet,
     row:{
-        length: 1000
+        length: 1000,
+        fixedStart: 10,
+        fixedEnd: 20
     },
     col:{
-        length: 100
+        length: 100,
+        fixedStart: 10,
+        fixedEnd: 20
     }
 })
 
