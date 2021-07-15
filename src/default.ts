@@ -165,17 +165,17 @@ export default {
             //字体颜色
             fc: '#000',
             //字体大小
-            fs: 12,
+            fs: 20,
             //字体格式
             ff: '微软雅黑',
             //水平方式
-            a: 'right',
+            a: 'left',
             //垂直方式
-            v: 'alphabetic',
+            v: 'middle',
             //粗体
             b: 1,
             //斜体
-            i: 1,
+            i: 0,
             //下划线
             u: 0,
             //中划线
@@ -195,13 +195,13 @@ export default {
             //字体颜色
             fc: '#222',
             //字体大小
-            fs: 20,
+            fs: 12,
             //字体格式
             ff: '微软雅黑',
             //水平方式
-            a: 'left',
+            a: 'right',
             //垂直方式
-            v: 'alphabetic',
+            v: 'center',
             //粗体
             b: 0,
             //斜体
@@ -209,7 +209,7 @@ export default {
             //下划线
             u: 1,
             //中划线
-            s: 1,
+            s: 0,
             //边框  style color width
             bl: ['solid','#f27611',1],
             br: ['dashed','#888888',1],

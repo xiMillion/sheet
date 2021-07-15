@@ -1,12 +1,21 @@
 
 import XSheet from './index';
-import {getCenterGrid,getGridPosition,createCellPos,getBorderStyle,getTextReact} from './utils';
+import {getCenterGrid,createCellPos,getBorderStyle,getTextReact,LineHeight,Span} from './utils';
 const log = console.log;
-
 interface BgfcMap{
     [prop:string]: {
         bgList: Array<{s:CellStyle,x:number,y:number,w:number,h:number}>,
-        fcList: Array<{s:CellStyle,t: unknown,x:number,y:number}>
+        fcList: Array<{
+            s:CellStyle,
+            t: unknown,
+            x1:number,
+            y1:number,
+            x2:number,
+            y2:number,
+            textWidth:number,
+            textHeight:number,
+            rows: Array<{text:string,width:number}>
+        }>
     }
 }
 
@@ -20,9 +29,11 @@ interface BorderMap{
 
 export default class Canvas{
 
+
     static log = log;
     //画布元素
     canvas: HTMLCanvasElement;
+    canvas2: HTMLCanvasElement;
     //实例
     context: XSheet;
     //画布上下文
@@ -244,7 +255,7 @@ export default class Canvas{
             const oTotalh = totalh;
             totalw = offsetLeft;
             totalh += rowMap[r].height;
-
+   
             for(let c = startColIndex; c < endColIndex; c ++){
                 const cell = dataSet[r][c];
                 const oTotalw = totalw;
@@ -270,23 +281,24 @@ export default class Canvas{
                     fcList:[]
                 };
 
-                const ffPosition = getGridPosition({
-                    x1: oTotalw,
-                    x2: totalw,
-                    y1: oTotalh,
-                    y2: totalh,
-                },style.a,style.v);
+                if(cell._width === undefined){
+                    const result = getTextReact(cell,style,colMap[c].width);
+                    cell._width = result.textWidth;
+                    cell._height = result.textHeight;
+                    cell._rows = result.rows;
+                }
 
                 bgffColorMap[style.fc].fcList.push({
                     s: style,
                     t: cell.w,
-                    x: ffPosition.x,
-                    y: ffPosition.y
+                    x1: oTotalw,
+                    x2: totalw,
+                    y1: oTotalh,
+                    y2: totalh,
+                    textWidth: cell._width,
+                    textHeight: cell._height,
+                    rows: cell._rows
                 });
-
-                const textRect = getTextReact(cell,style,colMap[c].width);
-                cell._width = textRect.width;
-                cell._height = textRect.height;
 
                 const _bl = style.bl.toString();
                 borderMap[_bl] = borderMap[_bl] || [];
@@ -501,6 +513,9 @@ export default class Canvas{
     renderTable(bgffColorMap:BgfcMap,borderMap:BorderMap):void{
         const {ctx} = this;
 
+        ctx.textBaseline = 'hanging';
+        ctx.textAlign = 'left';
+
         for(const color in bgffColorMap){
             const bgList = bgffColorMap[color].bgList;
             const fcList = bgffColorMap[color].fcList;
@@ -511,15 +526,76 @@ export default class Canvas{
                 const item = bgList[i];
                 ctx.fillRect(item.x,item.y,item.w,item.h);
             }
+             
 
+            let startY,startX;
             for(let i = 0 , length = fcList.length; i < length; i ++){
                 const item = fcList[i] , style = item.s;
-                ctx.font = `${style.i ? 'italic' : ''} ${style.fs}px ${style.ff} ${style.b ? 'bold' : ''}`;
-                ctx.textBaseline = style.v;
-                ctx.textAlign = style.a;
+                const addHeight = style.fs + style.fs * LineHeight;
+                const mapKey = `solid,${style.fc},${style.b ? 2 : 1}`;
+                borderMap[mapKey] = borderMap[mapKey] || [];
 
+                if(style.v === 'top'){
+                    startY = item.y1 + Span;
+                }else if(style.v === 'bottom'){
+                    startY = item.y2 - Span - item.textHeight;
+                }else{
+                    startY = item.y1 + (item.y2 - item.y1 - item.textHeight) / 2;
+                }
+     
+                // ctx.save();
+                //ctx.rect(item.x1, item.y1, item.x2 - item.x1, item.y2 - item.y1);
+                //ctx.clip();                
+                ctx.font = `${style.i ? 'italic' : ''} ${style.fs}px ${style.ff} ${style.b ? 'bold' : ''}`;
                 
-                ctx.fillText(item.t as string, item.x, item.y);
+                for(let i = 0,length = item.rows.length; i < length; i++){
+
+                    if(!item.rows[i].text) {
+                        startY += addHeight ;
+                        continue
+                    }
+
+                    if(style.a === 'left'){
+                        startX = item.x1 + Span;
+                    }else if(style.a === 'right'){
+                        startX = item.x2 - item.rows[i].width - Span;
+                    }else{
+                        startX = item.x1 + (item.x2 - item.x1 - item.rows[i].width) / 2;
+                    }
+                
+                    ctx.fillText(item.rows[i].text,startX,startY);
+
+                    if(style.u){
+                        borderMap[mapKey].push({
+                            t: 'top',
+                            s:  style,
+                            x1: startX,
+                            y1: startY + style.fs,
+                            x2: startX + item.rows[i].width,
+                            y2: startY + style.fs
+                        });
+                        //ctx.moveTo(startX,startY + style.fs);
+                        //ctx.lineTo(startX + item.rows[i].width,startY + style.fs);
+                    }
+                    if(style.s){
+                        borderMap[mapKey].push({
+                            t: 'top',
+                            s:  style,
+                            x1: startX,
+                            y1: startY + style.fs / 2,
+                            x2: startX + item.rows[i].width,
+                            y2: startY + style.fs / 2
+                        });
+                        //ctx.moveTo(startX,startY + style.fs / 2);
+                        //ctx.lineTo(startX + item.rows[i].width,startY + style.fs / 2);
+                    }
+                
+                    startY += addHeight ;
+                }
+
+                //ctx.restore();
+                
+                // ctx.fillText(item.t as string, item.x, item.y);
             }
         }
 

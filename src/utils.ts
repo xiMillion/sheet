@@ -1,7 +1,8 @@
 
 type attrObj = {[prop:string]: any};
 
-const Span = 5;
+export const Span = 5;
+export const LineHeight = 0.3;
 const Canvas:HTMLCanvasElement = document.createElement("canvas");
 const Ctx = Canvas.getContext("2d");
 
@@ -43,7 +44,7 @@ export const getGridPosition = function(grid: Grid,align:AlignType,vertical: Ver
 
     if(vertical === 'top'){
         y = grid.y1 + Span;
-    }else if(vertical === 'alphabetic'){
+    }else if(vertical === 'bottom'){
         y = grid.y2 - Span;
     }else{
         y = grid.y1 + (grid.y2 - grid.y1) / 2;
@@ -78,58 +79,59 @@ export const getBorderStyle = function(type:string): [number,number] {
     }
 }
 
-function getTextRow(value:string,boxWidth:number,font:string):number {
-    Ctx.font = font;
-  
-    let row = 1;
-    let lineWidth = 5;
-  
-    if(boxWidth <= 0){
-        return 1;
-    }
-  
-    for(let i = 0; i < value.length; i ++) {
-        lineWidth += Ctx.measureText(value[i]).width;
-  
-        if (lineWidth > boxWidth) {
-            lineWidth = 5;
-            row ++;
-            i -= 1;
-        }else if(/[\n]/.test(value[i])){
-            lineWidth = 5;
-            row ++;
-        }
-    }
-  
-    return row
-}
-  
-function getTextWidth(value:string, font:string):number {
-    if(!value) return 0;
-    Ctx.font = font;
-    const metrics = Ctx.measureText(value);
-  
-    return metrics.width
-  
-}
 
 //通过文字长度，宽度，size 模拟 高度,宽度
-export const getTextReact = function (cell:Cell,style:CellStyle,width:number): {width:number,height:number} {
-    const value = cell.w;
-    const isbreak = cell.tt === 2 || /[\r|\n]/.test(value);
-    const font = `${style.fs}px ${style.ff} ${style.b ? 'bold' : ''}`;
-  
-    if(!isbreak){
-        return {
-            width: getTextWidth(value,font),
-            height: Math.max(style.fs + Span,22)
+export const getTextReact = function (cell:Cell,style:CellStyle,cellWidth:number): {textHeight:number,textWidth:number,rows: Array<{text: string,width:number}>} {
+    
+    const value:string = cell.w , rows = [] , fontSize = style.fs;
+
+    if(!value || cellWidth < 1) return {
+        rows:[],
+        textHeight: fontSize,
+        textWidth: 0
+    };
+
+    let str = '' , total = Span * 2;
+    Ctx.font = `${style.i ? 'italic' : ''} ${style.fs}px ${style.ff} ${style.b ? 'bold' : ''}`
+    if(cell.tt === 2){
+        for(let i = 0, length = value.length; i < length; i ++){
+            const s = value[i];
+            const _total = total;
+            total += Ctx.measureText(s).width;
+            if(total > cellWidth || s === '\n'){
+                rows.push({
+                    text: str,
+                    width: _total - Span * 2
+                });
+                total = Span * 2;
+                str = '';
+            }else{
+                str += s;
+            }
+        
         }
-  
-    }else{
-        const rows = getTextRow(value,width - Span,font);
+
+        if(str){
+            rows.push({
+                text: str,
+                width: total - Span * 2
+            });
+        }
+
         return {
-            width: width - Span,
-            height: rows * style.fs + Span
+            rows,
+            textHeight: fontSize * rows.length + LineHeight * fontSize * (rows.length - 1),
+            textWidth: cellWidth
+        }
+    }else{
+        const textw = Ctx.measureText(value).width;
+        return {
+            rows:[{
+                text:value,
+                width: textw
+            }],
+            textHeight: fontSize,
+            textWidth: textw
         }
     }
 }

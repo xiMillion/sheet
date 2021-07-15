@@ -198,8 +198,13 @@ class XSheet{
                 break;
             }
         }
+        
 
-        return {startRowIndex,endRowIndex,scrollOffsetTop};
+        return {
+            startRowIndex,
+            endRowIndex: Math.min(endRowIndex + 1,option.row.length),
+            scrollOffsetTop
+        };
     }
     findNearestItemIndex_col(scrollLeft_strat:number,scrollLeft_end:number):{startColIndex:number,endColIndex:number,scrollOffsetLeft:number} {
         const {option} = this;
@@ -220,7 +225,11 @@ class XSheet{
             }
         }
 
-        return {startColIndex,endColIndex,scrollOffsetLeft};
+        return {
+            startColIndex,
+            endColIndex:  Math.min(endColIndex + 1,option.col.length),
+            scrollOffsetLeft
+        };
     }
 
     getRowBarWidth():number{
@@ -282,8 +291,9 @@ for(let r = 0; r < 1000; r ++){
     dataSet[r] = [];
     for(let c = 0; c < 100; c ++){
         dataSet[r].push({
-            w: `${r}-${c}`,
-            s: c % 2 === 0 ? 0 : 1
+            w: `ABC阿西吧${r}-${c}efg`,
+            s: c % 2 === 0 ? 0 : 1,
+            tt:2
         })
     
     }

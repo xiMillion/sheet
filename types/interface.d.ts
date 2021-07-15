@@ -85,8 +85,8 @@ declare interface Cell{
     //样式索引
     s: number,
     //展现类型  text\image\select\date\chart\
-    t: 'text',
-    //格式化
+    t: CellType,
+    //格式化 
     m: 'txt',
     //字符展现形式 0-超出截断  1-溢出  2-换行
     tt: 0 | 1 | 2,
@@ -95,7 +95,9 @@ declare interface Cell{
     //宽度
     _width?: number
     //高度,
-    _height?: number
+    _height?: number,
+    //行map
+    _rows: Array<{text:string,width:number}>
 }
 
 declare interface CellOption{
