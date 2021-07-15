@@ -48,7 +48,9 @@ declare interface Row{
 
 declare interface RowMap{
     //高度
-    height: number
+    height: number,
+    //是否改变
+    update?: boolean
 }
 
 declare interface Col{

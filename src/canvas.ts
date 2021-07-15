@@ -75,6 +75,19 @@ export default class Canvas{
         const rowConfig = option.row;
         const colConfig = option.col;
 
+        this.calculationRowHieght({
+            startColIndex: colConfig.fixedStart, 
+            endColIndex: colConfig.fixedEnd,
+            startRowIndex: rowConfig.fixedStart,
+            endRowIndex: rowConfig.fixedEnd,
+        });
+        this.calculationRowHieght({
+            startColIndex,
+            endRowIndex,
+            startRowIndex,
+            endColIndex
+        });
+
 
         if(this.oldScrollLeft !== screenLeft){
             ctx.clearRect(fixedOffsetLeft + 1, 0, boxWidth, fixedOffsetTop);
@@ -156,7 +169,7 @@ export default class Canvas{
         });
 
 
-        //封底线
+        //固定线
         ctx.strokeStyle = fixedLineColor;
         ctx.lineWidth = fixedLineWidth;
         if(colConfig.fixedEnd){
@@ -167,7 +180,7 @@ export default class Canvas{
         }
 
 
-        //封底线
+        //固定线
         if(rowConfig.fixedEnd){
             ctx.beginPath();
             this.moveTo(0, fixedOffsetTop);
@@ -237,6 +250,37 @@ export default class Canvas{
         }
     }
     
+    calculationRowHieght(config:{[prop:string]:any}):void{
+        const {startColIndex,endRowIndex,startRowIndex,endColIndex} = config;
+        const {option} = this.context;
+        const rowMap:RowMap[] = option.row.map;
+        const colMap:ColMap[] = option.col.map;
+        const dataSet:Array<Array<Cell>> = option.dataSet;
+        const styles = option.styles;
+        const defaultStyle =option.cell.style;
+
+        for(let r = startRowIndex; r < endRowIndex; r ++){
+            let maxRowHieght = 0;
+            for(let c = startColIndex; c < endColIndex; c ++){
+                const cell = dataSet[r][c];
+                const style = styles[cell.s] || defaultStyle;
+
+                if(cell._width === undefined){
+                    const result = getTextReact(cell,style,colMap[c].width);
+                    cell._width = result.textWidth;
+                    cell._height = result.textHeight;
+                    cell._rows = result.rows;
+                }
+                maxRowHieght = Math.max(maxRowHieght,cell._height)
+            }
+            
+            if(!rowMap[r].update){
+                rowMap[r].height = maxRowHieght + Span * 2;
+            }
+            
+        }
+    }
+
     calculationPermutation(config:{[prop:string]:any,bgffColorMap?:BgfcMap,borderMap?:BorderMap},callback:(bgffColorMap:BgfcMap,borderMap:BorderMap)=>void):void{
         const {startColIndex,endRowIndex,startRowIndex,endColIndex,offsetLeft,offsetTop,bgffColorMap = {},borderMap = {}} = config;
         const {option} = this.context;
@@ -246,16 +290,12 @@ export default class Canvas{
         const styles = option.styles;
         const defaultStyle =option.cell.style;
 
-        //按颜色（字体，背景）分组、边框独立分组（颜色、宽度、setLineDash）
-
-        //const bgffColorMap:BgfcMap = {} , borderMap:BorderMap = {};
-
         let totalh:number = offsetTop, totalw:number;
+        
         for(let r = startRowIndex; r < endRowIndex; r ++){
             const oTotalh = totalh;
             totalw = offsetLeft;
             totalh += rowMap[r].height;
-   
             for(let c = startColIndex; c < endColIndex; c ++){
                 const cell = dataSet[r][c];
                 const oTotalw = totalw;
@@ -280,13 +320,6 @@ export default class Canvas{
                     bgList:[],
                     fcList:[]
                 };
-
-                if(cell._width === undefined){
-                    const result = getTextReact(cell,style,colMap[c].width);
-                    cell._width = result.textWidth;
-                    cell._height = result.textHeight;
-                    cell._rows = result.rows;
-                }
 
                 bgffColorMap[style.fc].fcList.push({
                     s: style,
@@ -359,6 +392,8 @@ export default class Canvas{
                 // }
 
             }
+
+
         }
 
         callback(bgffColorMap,borderMap);
