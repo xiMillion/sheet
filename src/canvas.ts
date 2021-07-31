@@ -27,20 +27,42 @@ interface BorderMap{
     }>
 }
 
+//TODO 无法放到外部
+enum Direction {
+    init = -1,
+    unchanged = 0,
+    top,
+    bottom,
+    left,
+    right,
+    bottomLeft,
+    bottomRight,
+    topLeft,
+    topRight,
+}
+
 export default class Canvas{
 
 
     static log = log;
     //画布元素
     canvas: HTMLCanvasElement;
-    canvas2: HTMLCanvasElement;
+    oldCanvas: HTMLCanvasElement;
+    tableCanvas: HTMLCanvasElement;
     //实例
     context: XSheet;
     //画布上下文
     ctx: CanvasRenderingContext2D;
+    oldCtx: CanvasRenderingContext2D;
+    tableCtx: CanvasRenderingContext2D;
     //旧的滚动信息
     oldScrollTop: number;
     oldScrollLeft: number;
+
+    oldStartColIndex: number;
+    oldEndColIndex:number;
+    oldStartRowIndex:number;
+    oldEndRowIndex:number;
 
     constructor(context: XSheet){
 
@@ -48,23 +70,32 @@ export default class Canvas{
 
         this.canvas = document.createElement('canvas');
         this.ctx = this.canvas.getContext('2d');
-       
+
+        this.oldCanvas = document.createElement('canvas');
+        this.oldCtx = this.oldCanvas.getContext('2d');
+
+        this.tableCanvas = document.createElement('canvas');
+        this.tableCtx = this.tableCanvas.getContext('2d');
         
         this.initCanvas(context.boxWidth,context.boxHeight);
+
+        context.rootEl.appendChild(this.canvas);
+        context.rootEl.appendChild(this.oldCanvas);
+        context.rootEl.appendChild(this.tableCanvas);
         
     }
 
-    moveTo(x:number,y:number):void{
-        this.ctx.moveTo(x+0.5,y + 0.5)
+    moveTo(x:number,y:number,ctx:CanvasRenderingContext2D = this.ctx):void{
+        ctx.moveTo(x+0.5,y + 0.5)
     }
-    lineTo(x:number,y:number):void{
-        this.ctx.lineTo(x+0.5,y + 0.5)
+    lineTo(x:number,y:number,ctx:CanvasRenderingContext2D = this.ctx):void{
+        ctx.lineTo(x+0.5,y + 0.5)
     }
 
     render():void{
         //this.clearCanvas();
 
-        const {ctx} = this;
+        const {ctx,tableCtx} = this;
         const {option,boxHeight,boxWidth,rowBarWidth} = this.context;
         const {fixedOffsetLeft,fixedOffsetTop,scrollTop,scrollLeft,scrollOffsetTop,scrollOffsetLeft} = this.context;
         const {startColIndex,endRowIndex,startRowIndex,endColIndex} = this.context;
@@ -74,6 +105,7 @@ export default class Canvas{
 
         const rowConfig = option.row;
         const colConfig = option.col;
+        const direction = this.getScrollDirection();
 
         this.calculationRowHieght({
             startColIndex: colConfig.fixedStart, 
@@ -81,15 +113,12 @@ export default class Canvas{
             startRowIndex: rowConfig.fixedStart,
             endRowIndex: rowConfig.fixedEnd,
         });
-        this.calculationRowHieght({
-            startColIndex,
-            endRowIndex,
-            startRowIndex,
-            endColIndex
-        });
+
+        const requst = this.diffCanvas(direction,0,0);
+        this.calculationRowHieght(requst);
 
 
-        if(this.oldScrollLeft !== screenLeft){
+        if(this.oldScrollLeft !== scrollLeft){
             ctx.clearRect(fixedOffsetLeft + 1, 0, boxWidth, fixedOffsetTop);
             this.calculationPermutation({
                 startColIndex, 
@@ -146,23 +175,49 @@ export default class Canvas{
             });
         }
 
-        //set none dont renderLine
-        const isRenderInnerBorder = option.canvas.innerBorderColor !== 'none';
-        isRenderInnerBorder && this.renderGridLine();
-
+        //set none dont renderLine  改为renderTable
+        // const isRenderInnerBorder = option.canvas.innerBorderColor !== 'none';
+        // isRenderInnerBorder && this.renderGridLine();
+       
         ctx.clearRect(fixedOffsetLeft + 1, fixedOffsetTop + 1, boxWidth, boxHeight);
-        this.calculationPermutation({
-            startColIndex,endRowIndex,startRowIndex,endColIndex,
-            offsetLeft: scrollOffsetLeft + fixedOffsetLeft,
-            offsetTop: scrollOffsetTop + fixedOffsetTop,
-        },(bgffColorMap,borderMap)=>{
-    
+        tableCtx.clearRect(0,0,boxWidth, boxHeight);
+       
+
+        this.calculationPermutation(requst,(bgffColorMap,borderMap)=>{
+            //获取之前去除的部分
+            if(direction === Direction.bottom){
+                const oldHeight = this.context.getColOffsetHeight(this.oldStartRowIndex,startRowIndex);    
+                tableCtx.drawImage(this.oldCanvas,0,-oldHeight);
+                tableCtx.clearRect(0,requst.offsetTop,boxWidth, rowConfig.map[this.oldEndRowIndex - 1].height);
+            }else if(direction === Direction.top){
+                const oldHeight = this.context.getColOffsetHeight(startRowIndex,this.oldStartRowIndex);    
+                tableCtx.drawImage(this.oldCanvas,0,oldHeight);
+            }
+
+            if(direction === Direction.right){
+                const oldWidth = this.context.getRowOffsetWidth(this.oldStartColIndex,startColIndex);    
+                tableCtx.drawImage(this.oldCanvas,-oldWidth,0);
+                tableCtx.clearRect(requst.offsetLeft,0,colConfig.map[this.oldEndColIndex - 1].width, boxWidth);
+            }else if(direction === Direction.left){
+                const oldWidth = this.context.getRowOffsetWidth(startColIndex,this.oldStartColIndex);    
+                tableCtx.drawImage(this.oldCanvas,oldWidth,0);
+            }
+
+            if(direction === Direction.bottomRight){
+                
+            }
+
+
+            this.renderTable(bgffColorMap,borderMap,tableCtx);
+            
             ctx.save();
             ctx.rect(fixedOffsetLeft, fixedOffsetTop, boxWidth, boxHeight);
             ctx.clip();
-            ctx.translate(-scrollLeft,-scrollTop);
 
-            this.renderTable(bgffColorMap,borderMap)
+            ctx.translate(-scrollLeft,-scrollTop);
+      
+
+            ctx.drawImage(this.tableCanvas,fixedOffsetLeft + scrollOffsetLeft,fixedOffsetTop + scrollOffsetTop)
 
             ctx.restore();
 
@@ -191,6 +246,102 @@ export default class Canvas{
         this.oldScrollTop = scrollTop;
         this.oldScrollLeft = scrollLeft;
 
+        this.copyCanvas();
+
+    }
+
+    copyCanvas(): void{
+
+        Promise.resolve().then(()=>{
+            const {boxHeight,boxWidth} = this.context;
+
+            //const offsetLeft = this.context.getRowOffsetWidth(this.oldStartColIndex || 0,this.context.startColIndex);
+            //const offsetTop = this.context.getColOffsetHeight(this.oldStartRowIndex || 0,this.context.startRowIndex);
+    
+            this.oldCtx.clearRect(0, 0, boxWidth, boxHeight);
+            this.oldCtx.drawImage(this.tableCanvas,0,0);
+
+            const {startRowIndex,endRowIndex} = this.context.findNearestItemIndex_row(this.context.scrollTop,this.context.scrollTop + boxHeight);
+            const {startColIndex,endColIndex} = this.context.findNearestItemIndex_col(this.context.scrollLeft,this.context.scrollLeft + boxWidth);
+            
+            this.oldStartColIndex = startColIndex;
+            this.oldEndColIndex = endColIndex;
+            this.oldStartRowIndex = startRowIndex;
+            this.oldEndRowIndex = endRowIndex;
+        })
+    }
+
+    diffCanvas(direction:Direction,left:number,top:number): {[porp: string]: number} {
+
+        let startRowIndex,endRowIndex,startColIndex,endColIndex,offsetLeft = left,offsetTop = top;
+
+        switch (direction){
+        case Direction.init:
+
+            startRowIndex = this.oldEndRowIndex || 0;
+            endRowIndex = this.context.endRowIndex;
+            startColIndex = this.oldEndColIndex || 0;
+            endColIndex = this.context.endColIndex;
+            offsetLeft += this.context.getRowOffsetWidth(this.context.startColIndex || 0,this.oldEndColIndex - 3 || 0)
+            offsetTop += this.context.getColOffsetHeight(this.context.startRowIndex || 0,this.oldEndRowIndex - 3 || 0)
+            break;  
+        case Direction.right:
+            startRowIndex = this.context.startRowIndex;
+            endRowIndex = this.context.endRowIndex;
+            startColIndex = Math.max((this.oldEndColIndex || 0) - 3,0);
+            endColIndex = this.context.endColIndex;
+            offsetLeft += this.context.getRowOffsetWidth(this.context.startColIndex || 0,this.oldEndColIndex - 3 || 0)
+            offsetTop += 0
+            break;
+        case Direction.left:
+            startRowIndex = this.context.startRowIndex;
+            endRowIndex = this.context.endRowIndex;
+            startColIndex = this.context.startColIndex;
+            endColIndex = this.oldStartColIndex;
+            offsetLeft += 0;
+            offsetTop += 0
+            break;    
+        case Direction.bottom:
+            startRowIndex = Math.max((this.oldEndRowIndex || 0) - 3,0);
+            endRowIndex = this.context.endRowIndex;
+            startColIndex = this.context.startColIndex;
+            endColIndex = this.context.endColIndex;
+            offsetLeft += 0;
+            offsetTop += this.context.getColOffsetHeight(this.context.startRowIndex || 0,this.oldEndRowIndex - 3 || 0)
+            break;
+        case Direction.top:
+            startRowIndex = this.context.startRowIndex
+            endRowIndex = this.oldStartRowIndex;
+            startColIndex = this.context.startColIndex;
+            endColIndex = this.context.endColIndex;
+            offsetLeft += 0;
+            offsetTop += 0;
+            break;    
+        case Direction.bottomRight:
+            startRowIndex = 0;
+            endRowIndex = 0;
+            startColIndex = 0;
+            endColIndex = 0; 
+            offsetLeft = 0;
+            offsetTop = 0;
+            break;
+        default:
+            startRowIndex = 0;
+            endRowIndex = 0;
+            startColIndex = 0;
+            endColIndex = 0;
+            offsetLeft = 0;
+            offsetTop = 0; 
+        }
+
+        return {
+            startRowIndex,
+            endRowIndex,
+            startColIndex,
+            endColIndex,
+            offsetLeft,
+            offsetTop,
+        }
     }
 
     clearCanvas(): void{
@@ -205,8 +356,10 @@ export default class Canvas{
         const bgColor:string = this.context.option.canvas.background;
         
         //basic attr
-        this.canvas.width = width;
-        this.canvas.height = height;
+        this.tableCanvas.width = this.oldCanvas.width = this.canvas.width = width;
+        this.tableCanvas.height = this.oldCanvas.height = this.canvas.height = height;
+
+        // this.oldCanvas.style.cssText = 'position:absolute;left: 100%;top: 100%;';
 
         // this.canvas.style.width = width + 'px';
         // this.canvas.style.height = height + 'px';
@@ -275,7 +428,7 @@ export default class Canvas{
             }
             
             if(!rowMap[r].update){
-                rowMap[r].height = maxRowHieght + Span * 2;
+                rowMap[r].height = Math.ceil(maxRowHieght + Span * 2);
             }
             
         }
@@ -288,9 +441,13 @@ export default class Canvas{
         const colMap:ColMap[] = option.col.map;
         const dataSet:Array<Array<Cell>> = option.dataSet;
         const styles = option.styles;
-        const defaultStyle =option.cell.style;
+        const defaultStyle = option.cell.style;
+        const borderColor:string = option.canvas.innerBorderColor;
+        const guideKey = `solid,${borderColor},1`;
 
         let totalh:number = offsetTop, totalw:number;
+
+        borderMap[guideKey] = [];
         
         for(let r = startRowIndex; r < endRowIndex; r ++){
             const oTotalh = totalh;
@@ -332,50 +489,96 @@ export default class Canvas{
                     textHeight: cell._height,
                     rows: cell._rows
                 });
+                
 
-                const _bl = style.bl.toString();
-                borderMap[_bl] = borderMap[_bl] || [];
-                borderMap[_bl].push({
-                    t: 'left',
-                    s:  style,
-                    x1: oTotalw,
-                    y1: oTotalh,
-                    x2: totalw,
-                    y2: totalh
-                });
+                if(style.bl[0] === 'none'){
+                    borderMap[guideKey].push({
+                        t: 'left',
+                        s:  style,
+                        x1: oTotalw,
+                        y1: oTotalh,
+                        x2: totalw,
+                        y2: totalh
+                    })
+                }else{
+                    const _bl = style.bl.toString();
+                    borderMap[_bl] = borderMap[_bl] || [];
+                    borderMap[_bl].push({
+                        t: 'left',
+                        s:  style,
+                        x1: oTotalw,
+                        y1: oTotalh,
+                        x2: totalw,
+                        y2: totalh
+                    });
+                }
+                
+                if(style.bt[0] === 'none'){
+                    borderMap[guideKey].push({
+                        t: 'top',
+                        s:  style,
+                        x1: oTotalw,
+                        y1: oTotalh,
+                        x2: totalw,
+                        y2: totalh
+                    })
+                }else{
+                    const _bt = style.bt.toString();
+                    borderMap[_bt] = borderMap[_bt] || [];
+                    borderMap[_bt].push({
+                        t: 'top',
+                        s:  style,
+                        x1: oTotalw,
+                        y1: oTotalh,
+                        x2: totalw,
+                        y2: totalh
+                    });
+                }
 
-                const _bt = style.bt.toString();
-                borderMap[_bt] = borderMap[_bt] || [];
-                borderMap[_bt].push({
-                    t: 'top',
-                    s:  style,
-                    x1: oTotalw,
-                    y1: oTotalh,
-                    x2: totalw,
-                    y2: totalh
-                });
-
-                const _br = style.br.toString();
-                borderMap[_br] = borderMap[_br] || [];
-                borderMap[_br].push({
-                    t: 'right',
-                    s:  style,
-                    x1: oTotalw,
-                    y1: oTotalh,
-                    x2: totalw,
-                    y2: totalh
-                });
-
-                const _bb = style.bb.toString();
-                borderMap[_bb] = borderMap[_bb] || [];
-                borderMap[_bb].push({
-                    t: 'bottom',
-                    s:  style,
-                    x1: oTotalw,
-                    y1: oTotalh,
-                    x2: totalw,
-                    y2: totalh
-                });
+                if(style.br[0] === 'none'){
+                    borderMap[guideKey].push({
+                        t: 'right',
+                        s:  style,
+                        x1: oTotalw,
+                        y1: oTotalh,
+                        x2: totalw,
+                        y2: totalh
+                    })
+                }else{
+                    const _br = style.br.toString();
+                    borderMap[_br] = borderMap[_br] || [];
+                    borderMap[_br].push({
+                        t: 'right',
+                        s:  style,
+                        x1: oTotalw,
+                        y1: oTotalh,
+                        x2: totalw,
+                        y2: totalh
+                    });
+                }
+                
+                if(style.bb[0] === 'none'){
+                    borderMap[guideKey].push({
+                        t: 'bottom',
+                        s:  style,
+                        x1: oTotalw,
+                        y1: oTotalh,
+                        x2: totalw,
+                        y2: totalh
+                    })
+                }else{
+                    const _bb = style.bb.toString();
+                    borderMap[_bb] = borderMap[_bb] || [];
+                    borderMap[_bb].push({
+                        t: 'bottom',
+                        s:  style,
+                        x1: oTotalw,
+                        y1: oTotalh,
+                        x2: totalw,
+                        y2: totalh
+                    });
+                }
+            
 
                 //下划线
                 // if(style.u){
@@ -545,8 +748,8 @@ export default class Canvas{
 
     }
 
-    renderTable(bgffColorMap:BgfcMap,borderMap:BorderMap):void{
-        const {ctx} = this;
+    renderTable(bgffColorMap:BgfcMap,borderMap:BorderMap,ctx = this.ctx):void{
+        //const {ctx} = this;
 
         ctx.textBaseline = 'hanging';
         ctx.textAlign = 'left';
@@ -638,29 +841,59 @@ export default class Canvas{
             const bconfig = k.split(',');
 
             if(bconfig[0] === 'none') continue;
-
+           
             const list = borderMap[k];
             ctx.strokeStyle = bconfig[1];
             ctx.setLineDash(getBorderStyle(bconfig[0]));
             ctx.lineWidth = parseInt(bconfig[2]);
             ctx.beginPath();
+ 
             for(let i = 0 , length = list.length; i < length; i ++){
                 const {t,x1,x2,y1,y2} = list[i];
                 if(t === 'top'){
-                    this.moveTo(x1, y1);
-                    this.lineTo(x2, y1);
+                    this.moveTo(x1, y1,ctx);
+                    this.lineTo(x2, y1,ctx);
                 }else if(t === 'bottom'){
-                    this.moveTo(x1, y2);
-                    this.lineTo(x2, y2); 
+                    this.moveTo(x1, y2,ctx);
+                    this.lineTo(x2, y2,ctx); 
                 }else if(t === 'left'){
-                    this.moveTo(x1, y1);
-                    this.lineTo(x1, y2);
+                    this.moveTo(x1, y1,ctx);
+                    this.lineTo(x1, y2,ctx);
                 }else{
-                    this.moveTo(x2, y1);
-                    this.lineTo(x2, y2);
+                    this.moveTo(x2, y1,ctx);
+                    this.lineTo(x2, y2,ctx);
                 }
             }
             ctx.stroke();
+        }
+
+    }
+
+
+    /* *****************工具函数**************** */
+    getScrollDirection():number{
+        const {oldScrollLeft,oldScrollTop} = this;
+        const {scrollLeft,scrollTop} = this.context;
+
+        if(oldScrollLeft === undefined && oldScrollTop === undefined){
+            return Direction.init
+        }
+
+        const Left = (oldScrollLeft || 0) - scrollLeft;
+        const Top = (oldScrollTop || 0) - scrollTop;
+
+        if(Left === 0 && Top > 0){
+            return Direction.top;
+        }else if(Left === 0 && Top < 0){
+            return Direction.bottom;
+        }else if(Top === 0 && Left > 0){
+            return Direction.left;
+        }else if(Top === 0 && Left < 0){
+            return Direction.right;
+        }else if(Top < 0 && Left < 0){
+            return Direction.bottomRight;
+        }else{
+            return Direction.unchanged; 
         }
 
     }

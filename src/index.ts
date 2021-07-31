@@ -60,7 +60,6 @@ class XSheet{
         this.getRootRect();
 
         this.Canvas = new Canvas(this);
-        this.rootEl.appendChild(this.Canvas.canvas);
 
         this.init();
 
@@ -73,10 +72,12 @@ class XSheet{
         this.scrollTop = 0;
         this.scrollLeft = 0;
 
+        const {col,row} = this.option;
+
         //next grid 行高发生改变，固定单元格操作  需要重新调用
         this.rowBarWidth = this.getRowBarWidth();
-        this.fixedOffsetLeft = this.getFixedOffsetLeft();
-        this.fixedOffsetTop = this.getFixedOffsetTop();
+        this.fixedOffsetLeft = this.getRowOffsetWidth(col.fixedStart,col.fixedEnd) + this.rowBarWidth;
+        this.fixedOffsetTop = this.getColOffsetHeight(row.fixedStart,row.fixedEnd) + col.style.height;
 
 
         //mext 2
@@ -106,6 +107,15 @@ class XSheet{
         this.calculation();
         this.render();
         console.timeEnd('render');
+    }
+
+
+    setScroll(l:number,t:number):void{
+        this.scrollTop = t;
+        this.scrollLeft = l;
+
+        this.calculation();
+        this.render();
     }
 
     /************************dom***************************/
@@ -160,7 +170,8 @@ class XSheet{
 
         for(let r = 0; r < rowLength; r ++){
             rowMap[r] = rowMap[r] || {
-                height: rowHeight
+                height: rowHeight,
+                //update: true
             }
         }
 
@@ -238,25 +249,47 @@ class XSheet{
         return (rowWidth === 'maxw' ? (String(this.option.row.length + 1).length * (fontSize - 2)) : rowWidth as number);
     }
 
-    getFixedOffsetLeft():number{
+    getRowOffsetWidth(fixedStart:number,fixedEnd:number):number{
         const {option} = this;
         const colMap:ColMap[] = option.col.map;
-        const fixedStart = option.col.fixedStart;
-        const fixedEnd = option.col.fixedEnd;
-        let total:number = this.rowBarWidth;
+        // const fixedStart = option.col.fixedStart;
+        // const fixedEnd = option.col.fixedEnd;
+
+        // let max,min,negative;
+        // if(fixedStart < fixedEnd){
+        //     max = fixedEnd;
+        //     min = fixedStart;
+        //     negative = 1;
+        // }else{
+        //     max = fixedStart;
+        //     min = fixedEnd;
+        //     negative = -1;
+        // }
+
+        let total = 0;
         for(let i = fixedStart; i < fixedEnd; i ++){
             total += colMap[i].width;
         }
         return total;
     }
 
-    getFixedOffsetTop():number{
+    getColOffsetHeight(fixedStart:number,fixedEnd:number):number{
         const {option} = this;
         const rowMap:RowMap[] = option.row.map;
-        const fixedStart = option.row.fixedStart;
-        const fixedEnd = option.row.fixedEnd;
+        // const fixedStart = option.row.fixedStart;
+        // const fixedEnd = option.row.fixedEnd;
+        // let max,min,negative;
+        // if(fixedStart < fixedEnd){
+        //     max = fixedEnd;
+        //     min = fixedStart;
+        //     negative = 1;
+        // }else{
+        //     max = fixedStart;
+        //     min = fixedEnd;
+        //     negative = -1;
+        // }
 
-        let total:number = option.col.style.height;
+        let total = 0;
         for(let i = fixedStart; i < fixedEnd; i ++){
             total += rowMap[i].height;
         }
@@ -287,11 +320,11 @@ class XSheet{
 }
 
 const dataSet:any = [];
-for(let r = 0; r < 1000; r ++){
+for(let r = 0; r < 500; r ++){
     dataSet[r] = [];
-    for(let c = 0; c < 100; c ++){
+    for(let c = 0; c < 500; c ++){
         dataSet[r].push({
-            w: `ABC阿西吧${r}-${c}efg`,
+            w: r % 2 === 0 ? `ABC阿西吧${r}-${c}efg` : `${r}-${c}`,
             s: c % 2 === 0 ? 0 : 1,
             tt:2
         })
@@ -299,15 +332,15 @@ for(let r = 0; r < 1000; r ++){
     }
 }
 
-new XSheet('#box',{
+(<any>window).sheet = new XSheet('#box',{
     dataSet,
     row:{
-        length: 1000,
+        length: 500,
         fixedStart: 0,
         fixedEnd: 0
     },
     col:{
-        length: 100,
+        length: 500,
         fixedStart: 0,
         fixedEnd: 0
     }

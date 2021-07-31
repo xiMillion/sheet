@@ -36,7 +36,7 @@ export default {
             //字体格式
             fontFamily: '微软雅黑',
             //行高
-            height: 22,
+            height: 20,
             //拖动以及设置最小高
             minHeight: 0,
             //左侧表头宽  auto、maxw、number(px)
@@ -76,7 +76,7 @@ export default {
             //字体格式
             fontFamily: '微软雅黑',
             //列宽
-            width: 80,
+            width: 60,
             //拖动以及设置最小宽
             minWidth: 0,
             //上侧表头高  number(px)
@@ -165,7 +165,7 @@ export default {
             //字体颜色
             fc: '#000',
             //字体大小
-            fs: 20,
+            fs: 10,
             //字体格式
             ff: '微软雅黑',
             //水平方式
@@ -190,8 +190,8 @@ export default {
             or: ['none','#000000',1],
         },
         {
-            //背景色
-            bc: 'transparent',
+            //背景色 #5a8bf9
+            bc: '#5a8bf9',
             //字体颜色
             fc: '#222',
             //字体大小
