@@ -107,15 +107,16 @@ export default class Canvas{
         const colConfig = option.col;
         const direction = this.getScrollDirection();
 
-        this.calculationRowHieght({
-            startColIndex: colConfig.fixedStart, 
-            endColIndex: colConfig.fixedEnd,
-            startRowIndex: rowConfig.fixedStart,
-            endRowIndex: rowConfig.fixedEnd,
-        });
+        // this.calculationRowHieght({
+        //     startColIndex: colConfig.fixedStart, 
+        //     endColIndex: colConfig.fixedEnd,
+        //     startRowIndex: rowConfig.fixedStart,
+        //     endRowIndex: rowConfig.fixedEnd,
+        // });
 
         const requst = this.diffCanvas(direction,0,0);
-        this.calculationRowHieght(requst);
+
+        // this.calculationRowHieght(requst);
 
 
         if(this.oldScrollLeft !== scrollLeft){
@@ -148,6 +149,12 @@ export default class Canvas{
         }
     
         if(this.oldScrollTop !== scrollTop){
+            // this.calculationRowHieght({
+            //     startColIndex: colConfig.fixedStart, 
+            //     endColIndex: colConfig.fixedEnd,
+            //     startRowIndex,
+            //     endRowIndex,
+            // });
             ctx.clearRect(0, fixedOffsetTop + 1, fixedOffsetLeft, boxHeight);
             this.calculationPermutation({
                 startColIndex: colConfig.fixedStart, 
@@ -180,36 +187,8 @@ export default class Canvas{
         // isRenderInnerBorder && this.renderGridLine();
        
         ctx.clearRect(fixedOffsetLeft + 1, fixedOffsetTop + 1, boxWidth, boxHeight);
-        tableCtx.clearRect(0,0,boxWidth, boxHeight);
-       
-
         this.calculationPermutation(requst,(bgffColorMap,borderMap)=>{
-            //获取之前去除的部分
-            if(direction === Direction.bottom){
-                const oldHeight = this.context.getColOffsetHeight(this.oldStartRowIndex,startRowIndex);    
-                tableCtx.drawImage(this.oldCanvas,0,-oldHeight);
-                tableCtx.clearRect(0,requst.offsetTop,boxWidth, rowConfig.map[this.oldEndRowIndex - 1].height);
-            }else if(direction === Direction.top){
-                const oldHeight = this.context.getColOffsetHeight(startRowIndex,this.oldStartRowIndex);    
-                tableCtx.drawImage(this.oldCanvas,0,oldHeight);
-            }
-
-            if(direction === Direction.right){
-                const oldWidth = this.context.getRowOffsetWidth(this.oldStartColIndex,startColIndex);    
-                tableCtx.drawImage(this.oldCanvas,-oldWidth,0);
-                tableCtx.clearRect(requst.offsetLeft,0,colConfig.map[this.oldEndColIndex - 1].width, boxWidth);
-            }else if(direction === Direction.left){
-                const oldWidth = this.context.getRowOffsetWidth(startColIndex,this.oldStartColIndex);    
-                tableCtx.drawImage(this.oldCanvas,oldWidth,0);
-            }
-
-            if(direction === Direction.bottomRight){
-                
-            }
-
-
             this.renderTable(bgffColorMap,borderMap,tableCtx);
-            
             ctx.save();
             ctx.rect(fixedOffsetLeft, fixedOffsetTop, boxWidth, boxHeight);
             ctx.clip();
@@ -252,28 +231,35 @@ export default class Canvas{
 
     copyCanvas(): void{
 
-        Promise.resolve().then(()=>{
-            const {boxHeight,boxWidth} = this.context;
+        const {boxHeight,boxWidth} = this.context;
 
-            //const offsetLeft = this.context.getRowOffsetWidth(this.oldStartColIndex || 0,this.context.startColIndex);
-            //const offsetTop = this.context.getColOffsetHeight(this.oldStartRowIndex || 0,this.context.startRowIndex);
+        //const offsetLeft = this.context.getRowOffsetWidth(this.oldStartColIndex || 0,this.context.startColIndex);
+        //const offsetTop = this.context.getColOffsetHeight(this.oldStartRowIndex || 0,this.context.startRowIndex);
     
-            this.oldCtx.clearRect(0, 0, boxWidth, boxHeight);
-            this.oldCtx.drawImage(this.tableCanvas,0,0);
+        this.oldCtx.clearRect(0, 0, boxWidth, boxHeight);
+        this.oldCtx.drawImage(this.tableCanvas,0,0);
 
-            const {startRowIndex,endRowIndex} = this.context.findNearestItemIndex_row(this.context.scrollTop,this.context.scrollTop + boxHeight);
-            const {startColIndex,endColIndex} = this.context.findNearestItemIndex_col(this.context.scrollLeft,this.context.scrollLeft + boxWidth);
+        const {startRowIndex,endRowIndex} = this.context.findNearestItemIndex_row(this.context.scrollTop,this.context.scrollTop + boxHeight);
+        const {startColIndex,endColIndex} = this.context.findNearestItemIndex_col(this.context.scrollLeft,this.context.scrollLeft + boxWidth);
             
-            this.oldStartColIndex = startColIndex;
-            this.oldEndColIndex = endColIndex;
-            this.oldStartRowIndex = startRowIndex;
-            this.oldEndRowIndex = endRowIndex;
-        })
+        this.oldStartColIndex = startColIndex;
+        this.oldEndColIndex = endColIndex;
+        this.oldStartRowIndex = startRowIndex;
+        this.oldEndRowIndex = endRowIndex;
     }
 
-    diffCanvas(direction:Direction,left:number,top:number): {[porp: string]: number} {
+    diffCanvas(direction:Direction,left:number,top:number): {[porp: string]: any} {
+
+
+        const {tableCtx} = this;
+        const {boxWidth,boxHeight} = this.context;
+        const rowMap = this.context.option.row.map;
+        const colMap = this.context.option.col.map;
 
         let startRowIndex,endRowIndex,startColIndex,endColIndex,offsetLeft = left,offsetTop = top;
+        let oldHeight , oldWidth;
+
+        tableCtx.clearRect(0,0,boxWidth, boxHeight);
 
         switch (direction){
         case Direction.init:
@@ -291,7 +277,12 @@ export default class Canvas{
             startColIndex = Math.max((this.oldEndColIndex || 0) - 3,0);
             endColIndex = this.context.endColIndex;
             offsetLeft += this.context.getRowOffsetWidth(this.context.startColIndex || 0,this.oldEndColIndex - 3 || 0)
-            offsetTop += 0
+            offsetTop += 0;
+
+
+            oldWidth = this.context.getRowOffsetWidth(this.oldStartColIndex,this.context.startColIndex);    
+            tableCtx.drawImage(this.oldCanvas,- oldWidth,0);
+            tableCtx.clearRect(offsetLeft,0,colMap[this.oldEndColIndex - 1].width, boxHeight);
             break;
         case Direction.left:
             startRowIndex = this.context.startRowIndex;
@@ -300,6 +291,10 @@ export default class Canvas{
             endColIndex = this.oldStartColIndex;
             offsetLeft += 0;
             offsetTop += 0
+
+
+            oldWidth = this.context.getRowOffsetWidth(this.context.startColIndex,this.oldStartColIndex);    
+            tableCtx.drawImage(this.oldCanvas,oldWidth,0);
             break;    
         case Direction.bottom:
             startRowIndex = Math.max((this.oldEndRowIndex || 0) - 3,0);
@@ -308,6 +303,11 @@ export default class Canvas{
             endColIndex = this.context.endColIndex;
             offsetLeft += 0;
             offsetTop += this.context.getColOffsetHeight(this.context.startRowIndex || 0,this.oldEndRowIndex - 3 || 0)
+            
+
+            oldHeight = this.context.getColOffsetHeight(this.oldStartRowIndex,this.context.startRowIndex);    
+            tableCtx.drawImage(this.oldCanvas,0,-oldHeight);
+            tableCtx.clearRect(0,offsetTop,boxWidth, rowMap[this.oldEndRowIndex - 1].height);
             break;
         case Direction.top:
             startRowIndex = this.context.startRowIndex
@@ -316,6 +316,10 @@ export default class Canvas{
             endColIndex = this.context.endColIndex;
             offsetLeft += 0;
             offsetTop += 0;
+
+
+            oldHeight = this.context.getColOffsetHeight(this.context.startRowIndex,this.oldStartRowIndex);    
+            tableCtx.drawImage(this.oldCanvas,0,oldHeight);
             break;    
         case Direction.bottomRight:
             startRowIndex = 0;
@@ -324,6 +328,8 @@ export default class Canvas{
             endColIndex = 0; 
             offsetLeft = 0;
             offsetTop = 0;
+
+            
             break;
         default:
             startRowIndex = 0;
@@ -392,6 +398,14 @@ export default class Canvas{
         });
 
         if(colConfig.fixedEnd || rowConfig.fixedEnd){
+
+            // this.calculationRowHieght({
+            //     startColIndex: colConfig.fixedStart, 
+            //     endColIndex: colConfig.fixedEnd,
+            //     startRowIndex: rowConfig.fixedStart,
+            //     endRowIndex: rowConfig.fixedEnd,
+            // });
+
             this.calculationPermutation({
                 startColIndex:colConfig.fixedStart,
                 endColIndex:colConfig.fixedEnd,
@@ -473,22 +487,24 @@ export default class Canvas{
                     h: rowMap[r].height
                 });
 
-                bgffColorMap[style.fc] = bgffColorMap[style.fc] || {
-                    bgList:[],
-                    fcList:[]
-                };
-
-                bgffColorMap[style.fc].fcList.push({
-                    s: style,
-                    t: cell.w,
-                    x1: oTotalw,
-                    x2: totalw,
-                    y1: oTotalh,
-                    y2: totalh,
-                    textWidth: cell._width,
-                    textHeight: cell._height,
-                    rows: cell._rows
-                });
+                if(colMap[c].width > 8 && rowMap[r].height > 8){
+                    bgffColorMap[style.fc] = bgffColorMap[style.fc] || {
+                        bgList:[],
+                        fcList:[]
+                    };
+    
+                    bgffColorMap[style.fc].fcList.push({
+                        s: style,
+                        t: cell.w,
+                        x1: oTotalw,
+                        x2: totalw,
+                        y1: oTotalh,
+                        y2: totalh,
+                        textWidth: cell._width,
+                        textHeight: cell._height,
+                        rows: cell._rows
+                    });
+                }
                 
 
                 if(style.bl[0] === 'none'){

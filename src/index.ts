@@ -1,13 +1,15 @@
 import './index.less';
 import Canvas from './canvas';
 import setting from './default';
-import {extend} from './utils';
+import {extend,getTextReact,Span} from './utils';
 
 const log = console.log;
 
 /**
- * 线宽 0.5 不生效 ->  渲染机制 需加 0.5
+ * 线宽 0.5 不生效 -->  渲染机制 需加 0.5
  * 字体模糊  -> 浏览器放大了  需设置倍数
+ * 行高自适应 表格总体高度随改变
+ * 渲染函数再次抽象化，固定表格函数也要diff
  */
 
 class XSheet{
@@ -171,7 +173,7 @@ class XSheet{
         for(let r = 0; r < rowLength; r ++){
             rowMap[r] = rowMap[r] || {
                 height: rowHeight,
-                //update: true
+                update: true
             }
         }
 
@@ -188,6 +190,44 @@ class XSheet{
             }
         }
 
+        this.calculationRowHieght({
+            startColIndex: 0, 
+            endColIndex: this.option.col.length,
+            startRowIndex: 0,
+            endRowIndex: this.option.row.length,
+        });
+
+    }
+
+    calculationRowHieght(config:{[prop:string]:any}):void{
+        const {startColIndex,endRowIndex,startRowIndex,endColIndex} = config;
+        const {option} = this;
+        const rowMap:RowMap[] = option.row.map;
+        const colMap:ColMap[] = option.col.map;
+        const dataSet:Array<Array<Cell>> = option.dataSet;
+        const styles = option.styles;
+        const defaultStyle =option.cell.style;
+
+        for(let r = startRowIndex; r < endRowIndex; r ++){
+            let maxRowHieght = 0;
+            for(let c = startColIndex; c < endColIndex; c ++){
+                const cell = dataSet[r][c];
+                const style = styles[cell.s] || defaultStyle;
+
+                if(cell._width === undefined){
+                    const result = getTextReact(cell,style,colMap[c].width);
+                    cell._width = result.textWidth;
+                    cell._height = result.textHeight;
+                    cell._rows = result.rows;
+                }
+                maxRowHieght = Math.max(maxRowHieght,cell._height)
+            }
+            
+            if(!rowMap[r].update){
+                rowMap[r].height = Math.ceil(maxRowHieght + Span * 2);
+            }
+            
+        }
     }
 
     findNearestItemIndex_row(scrollTop_strat:number,scrollTop_end:number): {startRowIndex:number,endRowIndex:number,scrollOffsetTop:number} {
@@ -319,13 +359,13 @@ class XSheet{
     }
 }
 
-const dataSet:any = [];
-for(let r = 0; r < 500; r ++){
+const dataSet:any = [] , rows = 500 , cols = 500;
+for(let r = 0; r < rows; r ++){
     dataSet[r] = [];
-    for(let c = 0; c < 500; c ++){
+    for(let c = 0; c < cols; c ++){
         dataSet[r].push({
             w: r % 2 === 0 ? `ABC阿西吧${r}-${c}efg` : `${r}-${c}`,
-            s: c % 2 === 0 ? 0 : 1,
+            //s: r % 4,
             tt:2
         })
     
@@ -335,12 +375,12 @@ for(let r = 0; r < 500; r ++){
 (<any>window).sheet = new XSheet('#box',{
     dataSet,
     row:{
-        length: 500,
+        length: rows,
         fixedStart: 0,
         fixedEnd: 0
     },
     col:{
-        length: 500,
+        length: cols,
         fixedStart: 0,
         fixedEnd: 0
     }
