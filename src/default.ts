@@ -154,8 +154,8 @@ export default {
         //画布内边框颜色
         innerBorderColor: borderColor,
         //固定行列样式
-        fixedLineColor: '#0066ff',
-        fixedLineWidth: 1
+        fixedLineColor: borderColor,
+        fixedLineWidth: 2
     },
     //样式列表
     styles:[

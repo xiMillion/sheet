@@ -36,7 +36,7 @@ module.exports = {
         "indent": [1, 4],//缩进风格,
         "@typescript-eslint/no-explicit-any": ["off"], //关闭any类型的警告
         "@typescript-eslint/no-empty-function": ["off"], //函数未使用
-        " @typescript-eslint/explicit-module-boundary-types": ["off"]  //any
+        "@typescript-eslint/explicit-module-boundary-types": ["off"]  //any
     },
   };
   

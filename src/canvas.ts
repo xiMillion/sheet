@@ -206,21 +206,17 @@ export default class Canvas{
         //固定线
         ctx.strokeStyle = fixedLineColor;
         ctx.lineWidth = fixedLineWidth;
-        if(colConfig.fixedEnd){
-            ctx.beginPath();
-            this.moveTo(fixedOffsetLeft, 0);
-            this.lineTo(fixedOffsetLeft, boxHeight);
-            ctx.stroke();
-        }
+        ctx.beginPath();
+        this.moveTo(fixedOffsetLeft, 0);
+        this.lineTo(fixedOffsetLeft, boxHeight);
+        ctx.stroke();
 
 
         //固定线
-        if(rowConfig.fixedEnd){
-            ctx.beginPath();
-            this.moveTo(0, fixedOffsetTop);
-            this.lineTo(boxWidth, fixedOffsetTop);
-            ctx.stroke();
-        }
+        ctx.beginPath();
+        this.moveTo(0, fixedOffsetTop);
+        this.lineTo(boxWidth, fixedOffsetTop);
+        ctx.stroke();
 
         this.oldScrollTop = scrollTop;
         this.oldScrollLeft = scrollLeft;
@@ -253,8 +249,8 @@ export default class Canvas{
 
         const {tableCtx} = this;
         const {boxWidth,boxHeight} = this.context;
-        const rowMap = this.context.option.row.map;
-        const colMap = this.context.option.col.map;
+        // const rowMap = this.context.option.row.map;
+        //const colMap = this.context.option.col.map;
 
         let startRowIndex,endRowIndex,startColIndex,endColIndex,offsetLeft = left,offsetTop = top;
         let oldHeight , oldWidth;
@@ -282,7 +278,7 @@ export default class Canvas{
 
             oldWidth = this.context.getRowOffsetWidth(this.oldStartColIndex,this.context.startColIndex);    
             tableCtx.drawImage(this.oldCanvas,- oldWidth,0);
-            tableCtx.clearRect(offsetLeft,0,colMap[this.oldEndColIndex - 1].width, boxHeight);
+            tableCtx.clearRect(offsetLeft,0,boxWidth, boxHeight);
             break;
         case Direction.left:
             startRowIndex = this.context.startRowIndex;
@@ -303,11 +299,11 @@ export default class Canvas{
             endColIndex = this.context.endColIndex;
             offsetLeft += 0;
             offsetTop += this.context.getColOffsetHeight(this.context.startRowIndex || 0,this.oldEndRowIndex - 3 || 0)
-            
+            oldHeight = this.context.getColOffsetHeight(this.oldStartRowIndex,this.context.startRowIndex);
 
-            oldHeight = this.context.getColOffsetHeight(this.oldStartRowIndex,this.context.startRowIndex);    
             tableCtx.drawImage(this.oldCanvas,0,-oldHeight);
-            tableCtx.clearRect(0,offsetTop,boxWidth, rowMap[this.oldEndRowIndex - 1].height);
+            tableCtx.clearRect(0,offsetTop,boxWidth, boxHeight);
+
             break;
         case Direction.top:
             startRowIndex = this.context.startRowIndex
