@@ -96,15 +96,15 @@ export const getTextReact = function (cell:Cell,style:CellStyle,cellWidth:number
     if(cell.tt === 2){
         for(let i = 0, length = value.length; i < length; i ++){
             const s = value[i];
-            const _total = total;
-            total += Ctx.measureText(s).width;
+            const w = Ctx.measureText(s).width;
+            total += w;
             if(total > cellWidth || s === '\n'){
                 rows.push({
                     text: str,
-                    width: _total - Span * 2
+                    width: total - w - Span * 2
                 });
-                total = Span * 2;
-                str = '';
+                total = Span * 2 + w;
+                str = s;
             }else{
                 str += s;
             }

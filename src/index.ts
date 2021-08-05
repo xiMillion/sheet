@@ -173,7 +173,7 @@ class XSheet{
         for(let r = 0; r < rowLength; r ++){
             rowMap[r] = rowMap[r] || {
                 height: rowHeight,
-                update: true
+                //update: true
             }
         }
 
